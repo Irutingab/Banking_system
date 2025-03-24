@@ -9,6 +9,8 @@ This is a simple banking system implemented in Python. It supports operations fo
 - create an account(savings or current)
 - Deposit and withdraw
 - Display balance
+- Delete account
+- view user's details and update them 
 - Record transactions and save them in the database
 - Appy interest
 
@@ -19,7 +21,7 @@ This is a simple banking system implemented in Python. It supports operations fo
 
 4. Requirements
 
-- Python 3.12+
+- Python 3.12
 - MySQL server
 - mysql-connector-python library
 - python-dotenv library
@@ -27,7 +29,7 @@ This is a simple banking system implemented in Python. It supports operations fo
 
 5. Project set up
 - Clone the repository:
-    
+
     git clone <repository-url>
     cd <repository-directory>
 
