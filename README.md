@@ -1,6 +1,6 @@
 1. Banking System
 
-This is a simple banking system implemented in Python. It supports operations for Savings and Current accounts, including deposits, withdrawals, balance checks, and interest application for savings accounts. The system also records transactions in a MySQL database.
+This is a simple banking system implemented in Python. It supports operations for Savings and Current accounts, including deposits, withdrawals, balance checks, and interest application for savings accounts. The system also records transactions in a MySQL database. Each account is uniquely identified by its `account_number`.
 
 2. Features
 
@@ -43,21 +43,6 @@ This is a simple banking system implemented in Python. It supports operations fo
 
 - Set up the MySQL database:
     - Create a database named `banking_system`.
-    - Create a table named `Accounts` with the following schema:
-      ```sql
-      CREATE TABLE Accounts (
-          account_id INT AUTO_INCREMENT PRIMARY KEY,
-          account_type ENUM('Savings', 'Current') NOT NULL,
-          balance DECIMAL(10, 2) NOT NULL,
-          interest_rate DECIMAL(5, 2) DEFAULT NULL,  
-          min_balance DECIMAL(10, 2) DEFAULT NULL,   
-          overdraft_limit DECIMAL(10, 2) DEFAULT NULL, 
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          customer_id INT NOT NULL,
-          UNIQUE (customer_id, account_type),
-          FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE
-      );
-      ```
     - Create a table named `Customers` with the following schema:
       ```sql
       CREATE TABLE Customers (
@@ -68,15 +53,34 @@ This is a simple banking system implemented in Python. It supports operations fo
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
       ```
+
+    - Create a table named `Accounts` with the following schema:
+      ```sql
+      CREATE TABLE Accounts (
+          account_id INT AUTO_INCREMENT PRIMARY KEY,  -- Internal unique key (protected)
+          account_number CHAR(9) UNIQUE NOT NULL,  -- Public identifier (9-digit number)
+          customer_id INT NOT NULL,
+          account_type ENUM('Savings', 'Current') NOT NULL,
+          balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+          interest_rate DECIMAL(5, 2) DEFAULT NULL,  
+          min_balance DECIMAL(10, 2) DEFAULT NULL,   
+          overdraft_limit DECIMAL(10, 2) DEFAULT NULL, 
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE,
+          INDEX (account_number)  -- Indexing for faster lookups
+      );
+      ```
+
     - Create a table named `Transactions` with the following schema:
       ```sql
       CREATE TABLE Transactions (
           transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-          account_id INT,
+          account_number CHAR(9) NOT NULL,  
           transaction_type ENUM('Deposit', 'Withdrawal', 'Interest') NOT NULL,
-          amount DECIMAL(10, 2) NOT NULL,
+          amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),  -- Ensuring amount is positive
           transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (account_id) REFERENCES Accounts(account_id) ON DELETE CASCADE
+          FOREIGN KEY (account_number) REFERENCES Accounts(account_number) ON DELETE CASCADE,
+          INDEX (account_number)  -- Index for foreign key
       );
       ```
 
