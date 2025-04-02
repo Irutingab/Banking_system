@@ -1,53 +1,13 @@
 import mysql.connector 
 from DB import DataBaseConnection
-from decimal import Decimal  # Add this import
-
-def list_accounts(cursor):
-    try:
-        cursor.execute("SELECT account_id, balance, account_type FROM Accounts")
-        accounts = cursor.fetchall()
-        if accounts:
-            print("Existing Accounts:")
-            for account in accounts:
-                print(f"Account ID: {account[0]}, Balance: {account[1]}, Type: {account[2]}")
-        else:
-            print("No accounts found.")
-    except mysql.connector.Error as e:
-        print(f"Error fetching accounts: {e}")
-
-def list_transactions(cursor, account_id):
-    try:
-        cursor.execute("SELECT transaction_id, transaction_type, amount, transaction_date FROM Transactions WHERE account_id = %s", (account_id,))
-        transactions = cursor.fetchall()
-        if transactions:
-            print(f"Transactions for Account ID {account_id}:")
-            for transaction in transactions:
-                print(f"Transaction ID: {transaction[0]}, Type: {transaction[1]}, Amount: {transaction[2]}, Date: {transaction[3]}")
-        else:
-            print("No transactions found for this account.")
-    except mysql.connector.Error as e:
-        print(f"Error fetching transactions: {e}")
-
-def list_customers(cursor):
-    try:
-        cursor.execute("SELECT customer_id, name, email, phone_number FROM Customers")
-        customers = cursor.fetchall()
-        if customers:
-            print("Existing Customers:")
-            for customer in customers:
-                print(f"Customer ID: {customer[0]}, Name: {customer[1]}, Email: {customer[2]}, Phone: {customer[3]}")
-        else:
-            print("No customers found.")
-    except mysql.connector.Error as e:
-        print(f"Error fetching customers: {e}")
 
 def get_customer(cursor, customer_id):
     try:
-        print(f"Fetching customer with ID: {customer_id}")  # Debug statement
+        print(f"Fetching customer with ID: {customer_id}")  
         cursor.execute("SELECT customer_id, name, email, phone_number FROM Customers WHERE customer_id = %s", (customer_id,))
         customer = cursor.fetchone()
         if customer:
-            print(f"Customer found: {customer}")  # Debug statement
+            print(f"Customer found: {customer}")  
             return customer
         print(f"Customer {customer_id} not found.")
         return None
@@ -86,14 +46,13 @@ def update_customer(cursor, conn, customer_id):
 def customer_menu(cursor, conn):
     while True:
         print("\nChoose an action:")
-        print("1. View Customer Details")
+        print("1. Add New Customer")
         print("2. Update Customer Details")
-        print("3. Add New Customer")
-        print("4. List All Customers")  # Add this line
-        print("5. Exit")  # Update this line
+        print("3. View Customer Details")  
+        print("4. Exit")  
 
         choice = input("Enter your choice: ")
-        if choice == '1':
+        if choice == '3':
             customer_id = input("Enter customer ID: ")
             customer = get_customer(cursor, customer_id)
             if customer:
@@ -103,20 +62,19 @@ def customer_menu(cursor, conn):
             customer = get_customer(cursor, customer_id)
             if customer:
                 update_customer(cursor, conn, customer_id)
-        elif choice == '3':
+        elif choice == '1':
             add_customer(cursor, conn)
-        elif choice == '4':  # Add this block
-            list_customers(cursor)
-        elif choice == '5':  # Update this line
+        elif choice == '4':  
             break
         else:
             print("Invalid choice. Please try again.")
 
 class Account:
-    def __init__(self, account_id, balance, account_type):
+    def __init__(self, account_id, balance, account_type, customer_id):
         self._account_id = account_id
         self._balance = balance
         self._account_type = account_type
+        self._customer_id = customer_id  
         self.db_connection = DataBaseConnection()
         self.conn = self.db_connection.conn
         self.cursor = self.db_connection.cursor
@@ -124,8 +82,8 @@ class Account:
     def _create_account(self):
         try:
             self.cursor.execute(
-                "INSERT INTO Accounts (account_id, balance, account_type) VALUES (%s, %s, %s)",
-                (self._account_id, self._balance, self._account_type)
+                "INSERT INTO Accounts (account_id, balance, account_type, customer_id) VALUES (%s, %s, %s, %s)",
+                (self._account_id, self._balance, self._account_type, self._customer_id) 
             )
             self.conn.commit()
             print(f"Account {self._account_id} created in the database.")
@@ -134,35 +92,40 @@ class Account:
 
     def deposit(self, amount):
         try:
-            amount = float(amount)
+            amount = int(amount)  
             if amount > 0:
                 if not self._account_exists():
                     print(f"Account {self._account_id} does not exist.")
                     return
                 self._balance += amount
-                self._update_balance()
-                self._record_transaction('Deposit', amount)
+                self._update_balance()  # Update the database with the new balance
+                self._record_transaction('Deposit', amount)  # save the transaction
                 print(f"Deposited {amount}. New balance: {self._balance}")
             else:
                 print("Amount must be positive.")
         except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+            print("Please enter a valid number.")
+        except Exception as e:
+            print(f"An error occurred during deposit: {e}")
 
     def withdraw(self, amount):
         try:
-            amount = float(amount)
-            if amount > 0 and amount <= self._balance:
+            amount = int(amount)  # Convert amount to integer
+            if amount > 0:
                 if not self._account_exists():
                     print(f"Account {self._account_id} does not exist.")
                     return
-                self._balance -= amount
-                self._update_balance()
-                self._record_transaction('Withdrawal', amount)
-                print(f"Withdrew {amount}. New balance: {self._balance}")
+                if self._balance - amount >= 0:  # Ensure sufficient funds
+                    self._balance -= amount
+                    self._update_balance()  # Update the balance in the same account
+                    self._record_transaction('Withdrawal', amount)  # Record the transaction
+                    print(f"Withdrew {amount}. New balance: {self._balance}")
+                else:
+                    print("Insufficient balance.")
             else:
-                print("Invalid amount or insufficient funds.")
+                print("Amount must be positive.")
         except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+            print("Please enter a valid amount.")
 
     def display_balance(self):
         print(f"Account {self._account_id} Balance: {self._balance}")
@@ -190,6 +153,7 @@ class Account:
 
     def _update_balance(self):
         try:
+            # Update the balance in the existing account
             self.cursor.execute(
                 "UPDATE Accounts SET balance = %s WHERE account_id = %s",
                 (self._balance, self._account_id)
@@ -199,16 +163,16 @@ class Account:
             print(f"Database error: {e}")
 
 class SavingsAccount(Account):
-    def __init__(self, account_id, balance, interest_rate, min_balance):
-        super().__init__(account_id, balance, 'savings')
-        self._interest_rate = interest_rate
-        self._min_balance = min_balance
+    def __init__(self, account_id, balance, interest_rate, min_balance, customer_id):
+        super().__init__(account_id, int(balance), 'savings', customer_id) 
+        self._interest_rate = int(interest_rate)  # Store interest rate as an integer (e.g., 5 for 5%)
+        self._min_balance = int(min_balance)  
 
     def _create_account(self):
         try:
             self.cursor.execute(
-                "INSERT INTO Accounts (account_id, balance, account_type, interest_rate, min_balance) VALUES (%s, %s, %s, %s, %s)",
-                (self._account_id, self._balance, self._account_type, self._interest_rate, self._min_balance)
+                "INSERT INTO Accounts (account_id, balance, account_type, interest_rate, min_balance, customer_id) VALUES (%s, %s, %s, %s, %s, %s)",
+                (self._account_id, self._balance, self._account_type, self._interest_rate, self._min_balance, self._customer_id) 
             )
             self.conn.commit()
             print(f"Savings Account {self._account_id} created in the database.")
@@ -217,32 +181,43 @@ class SavingsAccount(Account):
 
     def withdraw(self, amount):
         try:
-            amount = Decimal(amount)  # Convert amount to Decimal
+            amount = int(amount) 
+            print(f"Attempting to withdraw {amount} from account {self._account_id}") 
+            print(f"Current balance: {self._balance}, Minimum balance: {self._min_balance}")  
             if self._balance - amount >= self._min_balance:
                 self._balance -= amount
-                self._record_transaction('Withdrawal', amount)
+                self._update_balance()  # Update the database with the new balance
+                self._record_transaction('Withdrawal', amount)  # Record the transaction
                 print(f"Withdrew {amount}. New balance: {self._balance}")
             else:
                 print("Withdrawal denied: Minimum balance requirement not met.")
         except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+            print("Invalid amount")
+        except Exception as e:
+            print(f"An error occurred during withdrawal: {e}")
 
     def apply_interest(self):
-        interest = self._balance * self._interest_rate
-        self._balance += interest
-        self._record_transaction('Interest', interest)
-        print(f"Interest applied. New balance: {self._balance}")
+        try:
+            interest = (self._balance * self._interest_rate) // 100  # Calculate interest as an integer
+            self._balance += interest
+            self._update_balance()  # Update the database with the new balance
+            self._record_transaction('Interest', interest)  # Record the transaction
+            print(f"Interest applied. New balance: {self._balance}")
+        except Exception as e:
+            print(f"An error occurred while applying interest: {e}")
 
 class CurrentAccount(Account):
-    def __init__(self, account_id, balance, overdraft_limit):
-        super().__init__(account_id, balance, 'current')
-        self._overdraft_limit = overdraft_limit if overdraft_limit is not None else Decimal('0.00')  # Set default value
+    def __init__(self, account_id, balance, overdraft_limit, customer_id):
+        super().__init__(account_id, int(balance), 'current', customer_id)  
+        if overdraft_limit is None or int(overdraft_limit) == 0:
+            raise ValueError("Overdraft limit cannot be null or zero for a Current Account.")
+        self._overdraft_limit = int(overdraft_limit)
 
     def _create_account(self):
         try:
             self.cursor.execute(
-                "INSERT INTO Accounts (account_id, balance, account_type, overdraft_limit) VALUES (%s, %s, %s, %s)",
-                (self._account_id, self._balance, self._account_type, self._overdraft_limit)
+                "INSERT INTO Accounts (account_id, balance, account_type, overdraft_limit, customer_id) VALUES (%s, %s, %s, %s, %s)",
+                (self._account_id, self._balance, self._account_type, self._overdraft_limit, self._customer_id)
             )
             self.conn.commit()
             print(f"Current Account {self._account_id} created in the database.")
@@ -251,30 +226,44 @@ class CurrentAccount(Account):
 
     def withdraw(self, amount):
         try:
-            amount = Decimal(amount)  # Convert amount to Decimal
+            amount = int(amount) 
+            print(f"Attempting to withdraw {amount} from account {self._account_id}")  
+            print(f"Current balance: {self._balance}, Overdraft limit: {self._overdraft_limit}")  
             if self._balance - amount >= -self._overdraft_limit:
                 self._balance -= amount
-                self._record_transaction('Withdrawal', amount)
+                self._update_balance()  # Update the database with the new balance
+                self._record_transaction('Withdrawal', amount)  # Record the transaction
                 print(f"Withdrew {amount}. New balance: {self._balance}")
             else:
                 print("Withdrawal denied: Overdraft limit exceeded.")
         except ValueError:
             print("Invalid amount. Please enter a valid number.")
+        except Exception as e:
+            print(f"An error occurred during withdrawal: {e}")
 
 def update_account(cursor, conn, account_id):
     try:
-        balance = float(input("Enter new balance: "))
+        balance = int(input("Enter new balance: "))
         account_type = input("Enter new account type (savings/current): ").lower()
-        cursor.execute(
-            "UPDATE Accounts SET balance = %s, account_type = %s WHERE account_id = %s",
-            (balance, account_type, account_id)
-        )
+        if account_type == 'current':
+            overdraft_limit = int(input("Enter new overdraft limit: "))
+            cursor.execute(
+                "UPDATE Accounts SET balance = %s, account_type = %s, overdraft_limit = %s WHERE account_id = %s",
+                (balance, account_type, overdraft_limit, account_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE Accounts SET balance = %s, account_type = %s WHERE account_id = %s",
+                (balance, account_type, account_id)
+            )
         conn.commit()
         print("Account updated successfully.")
     except mysql.connector.Error as e:
         print(f"Error updating account: {e}")
     except ValueError:
         print("Invalid input. Please enter valid numbers.")
+    except Exception as e:
+        print(f"An error occurred: {e}")    
 
 def account_menu(account):
     while True:
@@ -282,10 +271,8 @@ def account_menu(account):
         print("1. Deposit")
         print("2. Withdraw")
         print("3. Check Balance")
-        print("4. Apply Interest")
-        print("5. View Transactions")
-        print("6. Update Account Details")  # Add this line
-        print("7. Exit")  # Update this line
+        print("4. Update Account Details")  
+        print("5. Exit") 
 
         choice = input("Enter your choice: ")
         if choice == '1':
@@ -296,29 +283,25 @@ def account_menu(account):
             account.withdraw(amount)
         elif choice == '3':
             account.display_balance()
-        elif choice == '4' and isinstance(account, SavingsAccount):
-            account.apply_interest()
-        elif choice == '5':
-            list_transactions(account.cursor, account._account_id)
-        elif choice == '6':  # Add this block
+        elif choice == '4':  
             update_account(account.cursor, account.conn, account._account_id)
-        elif choice == '7':  # Update this line
+        elif choice == '5':  
             break
         else:
             print("Invalid choice or action not available for this account type.")
 
 def get_account(cursor, account_id):
     try:
-        print(f"Fetching account with ID: {account_id}")  # Debug statement
-        cursor.execute("SELECT account_id, balance, account_type, interest_rate, min_balance, overdraft_limit FROM Accounts WHERE account_id = %s", (account_id,))
+        print(f"Fetching account with ID: {account_id}")  
+        cursor.execute("SELECT account_id, balance, account_type, interest_rate, min_balance, overdraft_limit, customer_id FROM Accounts WHERE account_id = %s", (account_id,))
         account = cursor.fetchone()
         if account:
-            print(f"Account found: {account}")  # Debug statement
-            account_id, balance, account_type, interest_rate, min_balance, overdraft_limit = account
+            print(f"Account found: {account}") 
+            account_id, balance, account_type, interest_rate, min_balance, overdraft_limit, customer_id = account
             if account_type.lower() == 'savings':
-                return SavingsAccount(account_id, balance, interest_rate, min_balance)
+                return SavingsAccount(account_id, balance, interest_rate, min_balance, customer_id)
             elif account_type.lower() == 'current':
-                return CurrentAccount(account_id, balance, overdraft_limit)
+                return CurrentAccount(account_id, balance, overdraft_limit, customer_id)
         print(f"Account {account_id} not found.")
         return None
     except mysql.connector.Error as e:
@@ -335,11 +318,43 @@ def operate_existing_account(cursor):
 
 def delete_account(cursor, conn, account_id):
     try:
+        # Delete the account and related transactions
         cursor.execute("DELETE FROM Accounts WHERE account_id = %s", (account_id,))
         conn.commit()
         print(f"Account {account_id} deleted successfully.")
     except mysql.connector.Error as e:
         print(f"Error deleting account: {e}")
+
+def create_account(cursor, connection):
+    account_type = input("Enter account type (Savings/Current): ").capitalize()
+    customer_id = int(input("Enter customer ID: "))
+    initial_balance = int(input("Enter initial balance: "))
+
+    if account_type == "Savings":
+        interest_rate = int(input("Enter interest rate (e.g., 5 for 5%): "))
+        min_balance = int(input("Enter minimum balance: "))
+        query = """
+            INSERT INTO Accounts (account_type, balance, interest_rate, min_balance, customer_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        values = (account_type, initial_balance, interest_rate, min_balance, customer_id)
+    elif account_type == "Current":
+        overdraft_limit = int(input("Enter overdraft limit: "))
+        query = """
+            INSERT INTO Accounts (account_type, balance, overdraft_limit, customer_id)
+            VALUES (%s, %s, %s, %s)
+        """
+        values = (account_type, initial_balance, overdraft_limit, customer_id)
+    else:
+        print("Invalid account type.")
+        return
+
+    try:
+        cursor.execute(query, values)
+        connection.commit()
+        print(f"{account_type} Account created successfully.")
+    except Exception as e:
+        print(f"Database error: {e}")
 
 def account_choice():
     db_connection = DataBaseConnection()
@@ -350,45 +365,23 @@ def account_choice():
         print("1. Create Account")
         print("2. Manage Customers")
         print("3. Delete Account")
-        print("4. View All Accounts")
-        print("5. Operate Existing Account")
-        print("6. Exit")
+        print("4. Operate Existing Account")
+        print("5. Exit")
 
         choice = input("Enter your choice: ")
         if choice == '1':
-            account_type = input("Enter account type (Savings/Current): ").lower()
-            acc_id = input("Enter account ID: ")
-            balance = float(input("Enter initial balance: "))
-            if account_type == 'savings':
-                interest_rate = float(input("Enter interest rate (e.g., 0.05 for 5%): "))
-                min_balance = float(input("Enter minimum balance: "))
-                savings = SavingsAccount(acc_id, balance, interest_rate, min_balance)
-                savings._create_account()
-                account_menu(savings)
-            elif account_type == 'current':
-                overdraft_limit = float(input("Enter overdraft limit: "))
-                current = CurrentAccount(acc_id, balance, overdraft_limit)
-                current._create_account()
-                account_menu(current)
-            else:
-                print("Invalid account type.")
+            create_account(cursor, conn)  
         elif choice == '2':
             customer_menu(cursor, conn)
         elif choice == '3':
             account_id = input("Enter account ID to delete: ")
-            delete_account(cursor, conn, account_id)  # Call the new function
+            delete_account(cursor, conn, account_id)  
         elif choice == '4':
-            list_accounts(cursor)
-        elif choice == '5':
             operate_existing_account(cursor)
-        elif choice == '6':
+        elif choice == '5':
             print("*** Exiting ***")
             break
         else:
             print("Invalid choice")
 
-def main():
-    account_choice()
 
-if __name__ == "__main__":
-    main()
