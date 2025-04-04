@@ -2,7 +2,7 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+
 env_path = os.path.join(os.path.dirname(__file__), ".env")  # Ensure correct path
 load_dotenv(dotenv_path=env_path)
 
@@ -19,10 +19,10 @@ class DataBaseConnection:
     def connect(self):
         """Establish a database connection from the .env file."""
         try:
-            db_host = os.getenv("DB1_HOST")
-            db_user = os.getenv("DB1_USER")
-            db_password = os.getenv("DB1_PASSWORD")
-            db_name = os.getenv("DB1_NAME")
+            db_host = os.getenv("DB_HOST")
+            db_user = os.getenv("DB_USER")
+            db_password = os.getenv("DB_PASSWORD")
+            db_name = os.getenv("DB_NAME")
 
             # Check if credentials are loaded
             print(f"Loaded DB Credentials - Host: {db_host}, User: {db_user}")
