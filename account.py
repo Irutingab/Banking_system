@@ -21,6 +21,24 @@ class Account:
             print(f"Account {self._account_number} created in the database.")
         except mysql.connector.Error as e:
             print(f"Database error: {e}")
+            
+    def _record_transaction(self, transaction_type, amount):
+        if not self._account_exists():
+            print(f"Account {self._account_number} does not exist in the database.")
+            return
+        try:
+            self.cursor.execute(
+                """
+                INSERT INTO Transactions (account_number, transaction_type, amount)
+                VALUES (%s, %s, %s)
+                """,
+                (self._account_number, transaction_type, amount)
+            )
+            self.conn.commit()
+            print(f"Transaction saved successfully: {transaction_type} of {amount} for account {self._account_number}")
+        except mysql.connector.Error as e:
+            print(f"Database error while recording transaction: {e}")
+
 
     def deposit(self, amount):
         try:
@@ -39,7 +57,7 @@ class Account:
         except ValueError:
             print("Please enter a valid number.")
         except Exception as e:
-            print(f"An error occurred during deposit: {e}")
+            print(f"An error occurred during your deposit, Kindly try again! {e}")
 
     def withdraw(self, amount):
         try:
@@ -61,7 +79,7 @@ class Account:
         except ValueError:
             print("Please enter a valid number.")
         except Exception as e:
-            print(f"An error occurred during withdrawal: {e}")
+            print(f"An error occurred during your withdrawal, Please try again! {e}")
 
     def display_balance(self):
         print(f"Account {self._account_number} Balance: {self._balance}")
@@ -71,26 +89,10 @@ class Account:
             self.cursor.execute("SELECT 1 FROM Accounts WHERE account_number = %s", (self._account_number,))
             return self.cursor.fetchone() is not None
         except mysql.connector.Error as e:
-            print(f"Database error: {e}")
+            print(f"An error occured in the database, Please try gain!: {e}")
             return False
 
-    def _record_transaction(self, transaction_type, amount):
-        if not self._account_exists():
-            print(f"Account {self._account_number} does not exist in the database.")
-            return
-        try:
-            self.cursor.execute(
-                """
-                INSERT INTO Transactions (account_number, transaction_type, amount)
-                VALUES (%s, %s, %s)
-                """,
-                (self._account_number, transaction_type, amount)
-            )
-            self.conn.commit()
-            print(f"Transaction recorded: {transaction_type} of {amount} for account {self._account_number}")
-        except mysql.connector.Error as e:
-            print(f"Database error while recording transaction: {e}")
-
+    
     def _update_balance(self):
         try:
         

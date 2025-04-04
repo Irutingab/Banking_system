@@ -2,7 +2,7 @@ import mysql.connector
 
 def get_customer(cursor, customer_id):
     try:
-        print(f"Fetching customer with ID: {customer_id}")  
+        print(f"Fetching customer using their IDs: {customer_id}")  
         cursor.execute("SELECT customer_id, name, email, phone_number FROM Customers WHERE customer_id = %s", (customer_id,))
         customer = cursor.fetchone()
         if customer:
@@ -11,7 +11,7 @@ def get_customer(cursor, customer_id):
         print(f"Customer {customer_id} not found.")
         return None
     except mysql.connector.Error as e:
-        print(f"Error fetching customer: {e}")
+        print(f"Error retrieving customer: {e}")
         return None
 
 def add_customer(cursor, conn):
@@ -30,17 +30,31 @@ def add_customer(cursor, conn):
 
 def update_customer(cursor, conn, customer_id):
     try:
-        name = input("Enter new customer name: ")
-        email = input("Enter new customer email: ")
-        phone_number = input("Enter new customer phone number: ")
+        cursor.execute("SELECT name, email, phone_number FROM Customers WHERE customer_id = %s", (customer_id,))
+        Existing_data = cursor.fetchone()
+
+        if not Existing_data:
+            print("Customer not found.")
+            return
+
+        current_name, current_email, current_phone = Existing_data
+
+        print("Press enter to leave fields blank to keep current value or edit them: \n")
+
+        name = input(f"Enter new customer name (current: {current_name}): ").strip() or current_name
+        email = input(f"Enter new customer email (current: {current_email}): ").strip() or current_email
+        phone_number = input(f"Enter new customer phone number (current: {current_phone}): ").strip() or current_phone
+
         cursor.execute(
             "UPDATE Customers SET name = %s, email = %s, phone_number = %s WHERE customer_id = %s",
             (name, email, phone_number, customer_id)
         )
         conn.commit()
         print("Customer updated successfully.")
+        
     except mysql.connector.Error as e:
-        print(f"Error updating customer: {e}")
+        print(f"Error updating the database: {e}")
+
 
 def customer_menu(cursor, conn):
     while True:
@@ -66,5 +80,5 @@ def customer_menu(cursor, conn):
         elif choice == '4':  
             break
         else:
-            print("Invalid choice. Please try again.")
+            print("Invalid choice")
 

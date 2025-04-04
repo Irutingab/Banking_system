@@ -3,11 +3,13 @@ import mysql.connector
 from savings import SavingsAccount
 from customer import customer_menu
 from DB import DataBaseConnection
+
+
 class CurrentAccount(Account):
     def __init__(self, account_number, balance, overdraft_limit, customer_id):
         super().__init__(account_number, int(balance), 'current', customer_id)  
         if overdraft_limit is None or int(overdraft_limit) == 0:
-            raise ValueError("Overdraft limit cannot be null or zero for a Current Account.")
+            raise ValueError("Overdraft limit cannot be null")
         self._overdraft_limit = int(overdraft_limit)
 
     def _create_account(self):
@@ -32,35 +34,59 @@ class CurrentAccount(Account):
                 self._record_transaction('Withdrawal', amount)  # Record the transaction
                 print(f"Withdrew {amount}. New balance: {self._balance}")
             else:
-                print("Withdrawal denied: Overdraft limit exceeded.")
+                print("Overdraft limit exceeded, Please try again!")
         except ValueError:
-            print("Invalid amount. Please enter a valid number.")
+            print("Please enter a valid number.")
         except Exception as e:
-            print(f"An error occurred during withdrawal: {e}")
+            print(f"An error occurred during your withdrawal, Please try again: {e}")
 
 def update_account(cursor, conn, account_number):
     try:
-        balance = int(input("Enter new balance: "))
-        account_type = input("Enter new account type (savings/current): ").lower()
-        if account_type == 'current':
-            overdraft_limit = int(input("Enter new overdraft limit: "))
-            cursor.execute(
-                "UPDATE Accounts SET balance = %s, account_type = %s, overdraft_limit = %s WHERE account_number = %s",
-                (balance, account_type, overdraft_limit, account_number)
-            )
+        cursor.execute("SELECT account_type, overdraft_limit, interest_rate FROM Accounts WHERE account_number = %s", (account_number,))
+        Existing_info = cursor.fetchone()
+        
+        if not Existing_info:
+            print("Account not found.")
+            return
+
+        account_type, current_overdraft, current_interest = Existing_info
+
+        print(" Leave input blank to keep the current value.\n")
+
+        if account_type.lower() == 'current':
+            overdraft_input = input(f"Enter new overdraft limit (current: {current_overdraft}): ")
+            if overdraft_input.strip() != "":
+                overdraft_limit = int(overdraft_input)
+                cursor.execute(
+                    "UPDATE Accounts SET overdraft_limit = %s WHERE account_number = %s",
+                    (overdraft_limit, account_number)
+                )
+                conn.commit()
+                print("Overdraft limit updated successfully.")
+            else:
+                print("Overdraft limit unchanged.")
+
+        elif account_type.lower() == 'savings':
+            interest_input = input(f"Enter new interest rate (current: {current_interest}%): ")
+            if interest_input.strip() != "":
+                interest_rate = int(interest_input)
+                cursor.execute(
+                    "UPDATE Accounts SET interest_rate = %s WHERE account_number = %s",
+                    (interest_rate, account_number)
+                )
+                conn.commit()
+                print("Interest rate updated successfully.")
+            else:
+                print("Interest rate unchanged.")
+
         else:
-            cursor.execute(
-                "UPDATE Accounts SET balance = %s, account_type = %s WHERE account_number = %s",
-                (balance, account_type, account_number)
-            )
-        conn.commit()
-        print("Account updated successfully.")
+            print(" Unknown account error.")
+
     except mysql.connector.Error as e:
-        print(f"Error updating account: {e}")
+        print(f" MySQL Error: {e}")
     except ValueError:
-        print("Invalid input. Please enter valid numbers.")
-    except Exception as e:
-        print(f"An error occurred: {e}")    
+        print("Numbers only please!")
+
 
 def account_menu(account):
     while True:
@@ -131,7 +157,7 @@ def create_account(cursor, connection):
         if cursor.fetchone():
             break
         else:
-            print(f"Customer ID {customer_id} does not exist. Please enter a valid customer ID.")
+            print(f"Customer ID {customer_id} does not exist")
 
     account_number = input("Enter a unique 9-digit account number: ")
     initial_balance = int(input("Enter initial balance: "))
