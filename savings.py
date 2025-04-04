@@ -3,7 +3,7 @@ import mysql.connector
 class SavingsAccount(Account):
     def __init__(self, account_number, balance, interest_rate, min_balance, customer_id):
         super().__init__(account_number, int(balance), 'savings', customer_id) 
-        self._interest_rate = int(interest_rate)  # Store interest rate as an integer (e.g., 5 for 5%)
+        self._interest_rate = int(interest_rate)  
         self._min_balance = int(min_balance)  
 
     def _create_account(self):
@@ -20,16 +20,16 @@ class SavingsAccount(Account):
     def withdraw(self, amount):
         try:
             amount = int(amount) 
-            interest = amount * 0.05  # Calculate 5% of the withdrawal amount
+            interest = amount * 0.05  
 
-            total_withdrawal = amount + interest  # The total amount to be withdrawn including the fee
+            total_withdrawal = amount + interest 
             print(f"Attempting to withdraw {amount} with a fee of {interest}. Total withdrawal: {total_withdrawal}")
 
             if self._balance - total_withdrawal >= self._min_balance:
                 self._balance -= total_withdrawal 
                 self._update_balance()  # Update the database with the new balance
                 self._record_transaction('Withdrawal', amount)  # Record the transaction
-                print(f"Withdrew {amount}. Fee: {interest}. New balance: {self._balance}")
+                print(f"Withdrew {amount}. interest: {interest}. New balance: {self._balance}")
             else:
                 print("Withdrawal denied: Insufficient funds to cover withdrawal and fee.")
 

@@ -2,11 +2,11 @@ import mysql.connector
 
 def get_customer(cursor, customer_id):
     try:
-        print(f"Fetching customer using their IDs: {customer_id}")  
+        print(f"retrieving customer's details using their IDs: {customer_id}")  
         cursor.execute("SELECT customer_id, name, email, phone_number FROM Customers WHERE customer_id = %s", (customer_id,))
         customer = cursor.fetchone()
         if customer:
-            print(f"Customer found: {customer}")  
+            print("Customer found")  
             return customer
         print(f"Customer {customer_id} not found.")
         return None
@@ -69,7 +69,7 @@ def customer_menu(cursor, conn):
             customer_id = input("Enter customer ID: ")
             customer = get_customer(cursor, customer_id)
             if customer:
-                print(f"Customer ID: {customer[0]}, Name: {customer[1]}, Email: {customer[2]}, Phone: {customer[3]}")
+                print(f"(Customer ID: {customer[0]}, Name: {customer[1]}, Email: {customer[2]}, Phone: {customer[3]})")
         elif choice == '2':
             customer_id = input("Enter customer ID: ")
             customer = get_customer(cursor, customer_id)
