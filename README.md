@@ -8,16 +8,24 @@ This is a simple banking system implemented in Python. It supports operations fo
 - List transactions
 - Create an account (Savings or Current)
 - Deposit and withdraw
+  - Savings Accounts: Withdrawals include a 5% fee.
+  - Current Accounts: Overdraft limits are supported.
 - Display balance
 - Delete account
 - View user's details and update them
+  - Users can selectively update specific fields or leave them unchanged.
 - Record transactions and save them in the database
-- Apply interest
+- Apply interest to savings accounts
 
 3. Project Structure
 - `env/` - Environment configuration files
 - `Databaseconnection/` - Database connection logic
-- `account.py` - Main script for account operations
+- `account.py` - Base class for account operations
+- `current.py` - Logic for current accounts
+- `savings.py` - Logic for savings accounts
+- `customer.py` - Logic for managing customer details
+- `transactions.py` - Logic for recording and managing transactions
+- `main.py` - Entry point for the application
 
 4. Requirements
 
@@ -30,16 +38,16 @@ This is a simple banking system implemented in Python. It supports operations fo
 
 - Clone the repository:
 
-    ```bash
+    bash
     git clone <repository-url>
     cd <repository-directory>
-    ```
+   
 
 - Install the required Python packages:
 
-    ```bash
+   bash
     pip install mysql-connector-python python-dotenv
-    ```
+  
 
 - Set up the MySQL database:
     - Create a database named `banking_system`.
@@ -57,8 +65,8 @@ This is a simple banking system implemented in Python. It supports operations fo
     - Create a table named `Accounts` with the following schema:
       ```sql
       CREATE TABLE Accounts (
-          account_id INT AUTO_INCREMENT PRIMARY KEY,  -- Internal unique key (protected)
-          account_number CHAR(9) UNIQUE NOT NULL,  -- Public identifier (9-digit number)
+          account_id INT AUTO_INCREMENT PRIMARY KEY,  
+          account_number CHAR(9) UNIQUE NOT NULL,  
           customer_id INT NOT NULL,
           account_type ENUM('Savings', 'Current') NOT NULL,
           balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
@@ -67,7 +75,7 @@ This is a simple banking system implemented in Python. It supports operations fo
           overdraft_limit DECIMAL(10, 2) DEFAULT NULL, 
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE,
-          INDEX (account_number)  -- Indexing for faster lookups
+          INDEX (account_number) 
       );
       ```
 
@@ -77,10 +85,10 @@ This is a simple banking system implemented in Python. It supports operations fo
           transaction_id INT AUTO_INCREMENT PRIMARY KEY,
           account_number CHAR(9) NOT NULL,  
           transaction_type ENUM('Deposit', 'Withdrawal', 'Interest') NOT NULL,
-          amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),  -- Ensuring amount is positive
+          amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),  
           transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (account_number) REFERENCES Accounts(account_number) ON DELETE CASCADE,
-          INDEX (account_number)  -- Index for foreign key
+          INDEX (account_number)  
       );
       ```
 
@@ -95,10 +103,10 @@ This is a simple banking system implemented in Python. It supports operations fo
 
 6. Run the Project
 
-- Run the `account.py` script:
+- Run the `main.py` script:
 
     ```bash
-    python account.py
+    python main.py
     ```
 
 - Follow the prompts to create an account and perform various operations.
