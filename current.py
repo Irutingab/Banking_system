@@ -144,7 +144,7 @@ def operate_existing_account(cursor):
 
 def create_account(cursor, connection):
     while True:
-        account_type = input("Enter account type: ")
+        account_type = input("Enter account type savings or current: ")
         if account_type not in ['savings', 'current']:
             print("Error: Account type must be written in lowercase")
             continue
@@ -206,16 +206,16 @@ def account_choice():
     conn = db_connection.conn
     while True:
         print("\nChoose an action:")
-        print("1. Create Account")
-        print("2. Manage Customers")
+        print("1. Manage Customers")
+        print("2. Create Account")
         print("3. Operate Existing Account")
         print("4. Exit")
 
         choice = input("Enter your choice: ")
         if choice == '1':
-            create_account(cursor, conn)  
+            customer_menu(cursor, conn) 
         elif choice == '2':
-            customer_menu(cursor, conn)
+            create_account(cursor, conn) 
         
         elif choice == '3':
             operate_existing_account(cursor)
