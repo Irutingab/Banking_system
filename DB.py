@@ -45,7 +45,7 @@ class DataBaseConnection:
     def get_connection(self):
         if self.conn:
             return self.conn
-        raise ConnectionError("No DB connection available.")
+        raise ConnectionError("No Database connection available.")
 
     def close(self):
         if self.cursor:

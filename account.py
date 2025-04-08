@@ -1,5 +1,6 @@
 import mysql.connector 
 from DB import DataBaseConnection
+from datetime import datetime
 
 class Account:
     def __init__(self, account_number, balance, account_type, customer_id):
@@ -22,23 +23,28 @@ class Account:
         except mysql.connector.Error as e:
             print(f"Error connecting to the database: {e}")
             
-    def _record_transaction(self, transaction_type, amount):
-        if not self._account_exists():
-            print(f"Account {self._account_number} does not exist in the database.")
-            return
-        try:
-            self.cursor.execute(
-                """
-                INSERT INTO Transactions (account_number, transaction_type, amount)
-                VALUES (%s, %s, %s)
-                """,
-                (self._account_number, transaction_type, amount)
-            )
-            self.conn.commit()
-            print("Transaction preceeded successfully")
-        except mysql.connector.Error as e:
-            print(f"Database error while saving transaction: {e}")
+    def _record_transaction(self, transaction_type, amount, description=None):
 
+        try:
+            transaction_date = datetime.now()
+            
+            self.cursor.execute(
+                "INSERT INTO Transactions (account_number, transaction_type, amount, transaction_date, description) VALUES (%s, %s, %s, %s, %s)",
+                (self._account_number, transaction_type, amount, transaction_date, description)
+            )
+            
+            # Update the last_active date
+            self.cursor.execute(
+                "UPDATE Accounts SET last_active = %s WHERE account_number = %s",
+                (transaction_date.date(), self._account_number)
+            )
+            
+            self.conn.commit()
+            return True
+        except mysql.connector.Error as e:
+            print(f"Error recording transaction: {e}")
+            self.conn.rollback()
+            return False
 
     def deposit(self, amount):
         try:
@@ -51,6 +57,7 @@ class Account:
                 self._balance += amount
                 self._update_balance()  # Update the database with the new balance
                 self._record_transaction('Deposit', amount)  # save the transaction
+                self._update_last_active()
                 print(f"Deposited {amount}. Previous balance: {balance_before}, New balance: {self._balance}")
             else:
                 print("Amount must be positive.")
@@ -70,6 +77,7 @@ class Account:
                     self._balance -= amount
                     self._update_balance()  # Update the balance in the same account
                     self._record_transaction('Withdrawal', amount)  # save the transaction
+                    self._update_last_active()
                     print(f"Withdrew {amount}.  New balance: {self._balance}")
                 else:
                     print("Insufficient funds.")
@@ -93,14 +101,31 @@ class Account:
 
     
     def _update_balance(self):
+        """Update account balance in database"""
         try:
-        
             self.cursor.execute(
                 "UPDATE Accounts SET balance = %s WHERE account_number = %s",
                 (self._balance, self._account_number)
             )
-            self.conn.commit() 
-            print(f"Database updated: New balance for account {self._account_number} is {self._balance}")
+            self.conn.commit()
+            return True
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Error updating balance: {e}")
+            return False
+
+    def _fetch_account_status(self):
+        try:
+            self.cursor.execute(
+                "SELECT account_status FROM Accounts WHERE account_number = %s",
+                (self._account_number,)
+            )
+            status_result = self.cursor.fetchone()
+            if status_result:
+                self._account_status = status_result[0]
+            else:
+                self._account_status = 'status not defined'  
         except mysql.connector.Error as e:
-            print(f"Database error while updating balance: {e}")
+            print(f"Error fetching account status: {e}")    
+        return self._account_status
 

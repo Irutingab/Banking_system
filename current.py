@@ -3,6 +3,7 @@ import mysql.connector
 from savings import SavingsAccount
 from customer import customer_menu
 from DB import DataBaseConnection
+from datetime import datetime
 
 class CurrentAccount(Account):
     def __init__(self, account_number, balance, overdraft_limit, customer_id):
@@ -29,14 +30,49 @@ class CurrentAccount(Account):
             if self._balance - amount >= -self._overdraft_limit:
                 self._balance -= amount
                 self._update_balance()  
-                self._record_transaction('Withdrawal', amount)  
-                print(f"Withdrew {amount}")
+                transaction_success = self._record_transaction('Withdrawal', amount)
+                if transaction_success:
+                    self._update_last_active()  # Ensure last_active is updated
+                    print(f"Withdrew {amount}")
+                return True
             else:
                 print("Overdraft limit exceeded, Please try again!")
+                return False
         except ValueError:
             print("Please enter a valid number.")
+            return False
         except Exception as e:
             print(f"An error occurred during your withdrawal, Please try again: {e}")
+            return False
+
+    def _record_transaction(self, transaction_type, amount):
+        """Record a transaction in the database."""
+        try:
+            transaction_date = datetime.now()
+            # Adjust the query to match the actual schema of the Transactions table
+            self.cursor.execute(
+                "INSERT INTO Transactions (account_number, transaction_type, amount, transaction_date) VALUES (%s, %s, %s, %s)",
+                (self._account_number, transaction_type, amount, transaction_date)
+            )
+            self.conn.commit()
+            return True
+        except mysql.connector.Error as e:
+            print(f"Error recording transaction: {e}")
+            self.conn.rollback()
+            return False
+
+    def _update_last_active(self):
+        """Update the last_active column in the database."""
+        try:
+            last_active_date = datetime.now()
+            self.cursor.execute(
+                "UPDATE Accounts SET last_active = %s WHERE account_number = %s",
+                (last_active_date, self._account_number)
+            )
+            self.conn.commit()
+        except mysql.connector.Error as e:
+            print(f"Error updating last_active: {e}")
+            self.conn.rollback()
 
 def update_account(cursor, conn, account_number):
     try:
@@ -150,7 +186,8 @@ def create_account(cursor, connection):
     
     while True:
         customer_id = int(input("Enter customer ID: "))
-        cursor.execute("SELECT FROM Customers WHERE customer_id = %s", (customer_id,))
+        # Fix the SQL query to properly select a column
+        cursor.execute("SELECT customer_id FROM Customers WHERE customer_id = %s", (customer_id,))
         if cursor.fetchone():
             break
         else:
@@ -159,7 +196,7 @@ def create_account(cursor, connection):
     while True:
         account_number = input("Enter a unique 9-digit account number: ")
         
-        cursor.execute("SELECT FROM Accounts WHERE account_number = %s", (account_number,))
+        cursor.execute("SELECT account_number FROM Accounts WHERE account_number = %s", (account_number,))
         if cursor.fetchone():
             print(f"Account number {account_number} already exists. Please use a different account number.")
         else:
