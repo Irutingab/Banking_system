@@ -1,47 +1,54 @@
 from DB import DataBaseConnection
-from datetime import datetime, timedelta
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+# Constants
+ACCOUNT_STATUS_ACTIVE = 'active'
+ACCOUNT_STATUS_DISABLED = 'disabled'
 
 def update_inactive_accounts():
-    """
-    Updates account statuses based on inactivity:
-    - Disable accounts inactive for 5+ months
-    - Delete accounts inactive for 2+ years
-    """
-    db_connection = DataBaseConnection()
+    
+    db_connection = DataBaseConnection()  
     cursor = db_connection.cursor
     conn = db_connection.conn
     
     try:
         today = datetime.now().date()
-        five_months_ago = today - timedelta(days=5*30)  # Approximately 5 months
-        two_years_ago = today - timedelta(days=2*365)  # 2 years
+        five_months_ago = today - relativedelta(months=5)
+        two_years_ago = today - relativedelta(years=2)
+
+        cursor.execute("DESCRIBE Accounts")
+        columns = [column[0] for column in cursor.fetchall()]
+        #print(f"Columns in Accounts table: {columns}")
         
-        # Identify accounts to be disabled (inactive for 5+ months)
-        cursor.execute("""
-            SELECT account_number, last_active 
+        activity_column = "last_active"
+        query = f"""
+            SELECT account_number, {activity_column} 
             FROM Accounts 
-            WHERE account_status = 'active' 
-            AND last_active < %s
-        """, (five_months_ago,))
+            WHERE account_status = %s 
+            AND {activity_column} < %s
+        """
+        cursor.execute(query, (ACCOUNT_STATUS_ACTIVE, five_months_ago))
         
-        accounts_to_disable = cursor.fetchall()
-        for account in accounts_to_disable:
+        accounts_disable = cursor.fetchall()
+        for account in accounts_disable:
             account_number, last_active = account
             days_inactive = (today - last_active).days
             print(f"Disabling account {account_number} - inactive for {days_inactive} days")
             
             cursor.execute("""
                 UPDATE Accounts 
-                SET account_status = 'disabled' 
+                SET account_status = %s 
                 WHERE account_number = %s
-            """, (account_number,))
+            """, (ACCOUNT_STATUS_DISABLED, account_number))
             
         # Identify accounts to be deleted (inactive for 2+ years)
-        cursor.execute("""
-            SELECT account_number, last_active 
+        query = f"""
+            SELECT account_number, {activity_column} 
             FROM Accounts 
-            WHERE last_active < %s
-        """, (two_years_ago,))
+            WHERE {activity_column} < %s
+        """
+        cursor.execute(query, (two_years_ago,))
         
         accounts_to_delete = cursor.fetchall()
         for account in accounts_to_delete:
@@ -49,21 +56,21 @@ def update_inactive_accounts():
             days_inactive = (today - last_active).days
             print(f"Deleting account {account_number} - inactive for {days_inactive} days")
             
-            # Delete related records first (transactions, etc.)
-            cursor.execute("DELETE FROM Transactions WHERE account_number = %s", (account_number,))
-            
-            # Then delete the account
-            cursor.execute("DELETE FROM Accounts WHERE account_number = %s", (account_number,))
+            try:
+                # Delete related transactions
+                cursor.execute("DELETE FROM Transactions WHERE account_number = %s", (account_number,))
+                
+                # Delete the account
+                cursor.execute("DELETE FROM Accounts WHERE account_number = %s", (account_number,))
+            except Exception as delete_error:
+                print(f"Error deleting account {account_number}: {delete_error}")
+                continue
             
         conn.commit()
-        print(f"Updated {len(accounts_to_disable)} accounts to disabled status")
+        print(f"Updated {len(accounts_disable)} accounts to disabled status")
         print(f"Deleted {len(accounts_to_delete)} inactive accounts")
         
     except Exception as e:
-        print(f"Error updating inactive accounts: {e}")
-    finally:
-        cursor.close()
-        conn.close()
 
-if __name__ == "__main__":
-    update_inactive_accounts()
+        print(f"An error occurred while updating inactive accounts: {e}")
+
