@@ -8,8 +8,8 @@ class Account:
         self._account_type = account_type
         self._customer_id = customer_id  
         self.db_connection = DataBaseConnection()
-        self.conn = self.db_connection.conn
-        self.cursor = self.db_connection.cursor
+        self.conn = self.db_connection.get_connection()
+        self.cursor = self.db_connection.get_cursor()
 
     def _create_account(self):
         try:
@@ -18,9 +18,9 @@ class Account:
                 (self._account_number, self._balance, self._account_type, self._customer_id) 
             )
             self.conn.commit()
-            print(f"Account {self._account_number} created in the database.")
+            print(f"Account {self._account_number} created and saved in the database.")
         except mysql.connector.Error as e:
-            print(f"Database error: {e}")
+            print(f"Error connecting to the database: {e}")
             
     def _record_transaction(self, transaction_type, amount):
         if not self._account_exists():
@@ -35,9 +35,9 @@ class Account:
                 (self._account_number, transaction_type, amount)
             )
             self.conn.commit()
-            print(f"Transaction saved successfully: {transaction_type} of {amount} for account {self._account_number}")
+            print("Transaction preceeded successfully")
         except mysql.connector.Error as e:
-            print(f"Database error while recording transaction: {e}")
+            print(f"Database error while saving transaction: {e}")
 
 
     def deposit(self, amount):
@@ -50,7 +50,7 @@ class Account:
                 balance_before = self._balance
                 self._balance += amount
                 self._update_balance()  # Update the database with the new balance
-                self._record_transaction('Deposit', amount)  # Record the transaction
+                self._record_transaction('Deposit', amount)  # save the transaction
                 print(f"Deposited {amount}. Previous balance: {balance_before}, New balance: {self._balance}")
             else:
                 print("Amount must be positive.")
@@ -66,12 +66,11 @@ class Account:
                 if not self._account_exists():
                     print(f"Account {self._account_number} does not exist.")
                     return
-                if self._balance - amount >= 0:  # Ensure sufficient funds
-                    balance_before = self._balance
+                if self._balance - amount >= 0:  # Ensure enough funds
                     self._balance -= amount
                     self._update_balance()  # Update the balance in the same account
-                    self._record_transaction('Withdrawal', amount)  # Record the transaction
-                    print(f"Withdrew {amount}. Previous balance: {balance_before}, New balance: {self._balance}")
+                    self._record_transaction('Withdrawal', amount)  # save the transaction
+                    print(f"Withdrew {amount}.  New balance: {self._balance}")
                 else:
                     print("Insufficient funds.")
             else:
@@ -89,7 +88,7 @@ class Account:
             self.cursor.execute("SELECT 1 FROM Accounts WHERE account_number = %s", (self._account_number,))
             return self.cursor.fetchone() is not None
         except mysql.connector.Error as e:
-            print(f"An error occured in the database, Please try gain!: {e}")
+            print(f"An error occurred in the database, Please try again!: {e}")
             return False
 
     

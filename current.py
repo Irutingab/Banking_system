@@ -4,7 +4,6 @@ from savings import SavingsAccount
 from customer import customer_menu
 from DB import DataBaseConnection
 
-
 class CurrentAccount(Account):
     def __init__(self, account_number, balance, overdraft_limit, customer_id):
         super().__init__(account_number, int(balance), 'current', customer_id)  
@@ -21,18 +20,17 @@ class CurrentAccount(Account):
             self.conn.commit()
             print(f"Current Account {self._account_number} created in the database.")
         except mysql.connector.Error as e:
-            print(f"Database error: {e}")
+            print(f"Database related error: {e}")
 
     def withdraw(self, amount):
         try:
             amount = int(amount) 
-            print(f"Attempting to withdraw {amount} from account {self._account_number}")  
             print(f"Current balance: {self._balance}, Overdraft limit: {self._overdraft_limit}")  
             if self._balance - amount >= -self._overdraft_limit:
                 self._balance -= amount
-                self._update_balance()  # Update the database with the new balance
-                self._record_transaction('Withdrawal', amount)  # Record the transaction
-                print(f"Withdrew {amount}. New balance: {self._balance}")
+                self._update_balance()  
+                self._record_transaction('Withdrawal', amount)  
+                print(f"Withdrew {amount}")
             else:
                 print("Overdraft limit exceeded, Please try again!")
         except ValueError:
@@ -85,7 +83,7 @@ def update_account(cursor, conn, account_number):
     except mysql.connector.Error as e:
         print(f" MySQL Error: {e}")
     except ValueError:
-        print("Numbers only please!")
+        print("Please enter a valid number!")
 
 
 def account_menu(account):
@@ -111,24 +109,27 @@ def account_menu(account):
         elif choice == '5':  
             break
         else:
-            print("Invalid choice or action not available for this account type.")
+            print("Invalid choice.")
 
 def get_account(cursor, account_number):
     try:
-        print(f"Fetching account with number: {account_number}")  
+        print(f"Retrieving account with number: {account_number}")  
         cursor.execute("SELECT account_number, balance, account_type, interest_rate, min_balance, overdraft_limit, customer_id FROM Accounts WHERE account_number = %s", (account_number,))
         account = cursor.fetchone()
         if account:
-            print(f"Account found: {account}") 
+
+            print(f"(account_number: {account[0]}, balance: {account[1]}, account_type: {account[2]}, interest_rate: {account[3]}, min_balance: {account[4]}, overdraft_limit: {account[5]}, customer_id: {account[6]})")
+            
             account_number, balance, account_type, interest_rate, min_balance, overdraft_limit, customer_id = account
             if account_type.lower() == 'savings':
                 return SavingsAccount(account_number, balance, interest_rate, min_balance, customer_id)
             elif account_type.lower() == 'current':
                 return CurrentAccount(account_number, balance, overdraft_limit, customer_id)
+
         print(f"Account {account_number} not found.")
         return None
     except mysql.connector.Error as e:
-        print(f"Error fetching account: {e}")
+        print(f"Error finding account: {e}")
         return None
 
 def operate_existing_account(cursor):
@@ -139,38 +140,47 @@ def operate_existing_account(cursor):
     else:
         print(f"Account {account_number} not found.")
 
-def delete_account(cursor, conn, account_number):
-    try:
-        # Delete the account and related transactions
-        cursor.execute("DELETE FROM Accounts WHERE account_number = %s", (account_number,))
-        conn.commit()
-        print(f"Account {account_number} deleted successfully.")
-    except mysql.connector.Error as e:
-        print(f"Error deleting account: {e}")
-
 def create_account(cursor, connection):
-    account_type = input("Enter account type (Savings/Current): ").capitalize()
+    while True:
+        account_type = input("Enter account type savings or current: ")
+        if account_type not in ['savings', 'current']:
+            print("Error: Account type must be written in lowercase")
+            continue
+        break
     
     while True:
         customer_id = int(input("Enter customer ID: "))
-        cursor.execute("SELECT 1 FROM Customers WHERE customer_id = %s", (customer_id,))
+        cursor.execute("SELECT FROM Customers WHERE customer_id = %s", (customer_id,))
         if cursor.fetchone():
             break
         else:
             print(f"Customer ID {customer_id} does not exist")
 
-    account_number = input("Enter a unique 9-digit account number: ")
+    while True:
+        account_number = input("Enter a unique 9-digit account number: ")
+        
+        cursor.execute("SELECT FROM Accounts WHERE account_number = %s", (account_number,))
+        if cursor.fetchone():
+            print(f"Account number {account_number} already exists. Please use a different account number.")
+        else:
+            break
+            
     initial_balance = int(input("Enter initial balance: "))
 
-    if account_type == "Savings":
-        interest_rate = int(input("Enter interest rate (e.g., 5 for 5%): "))
+    if account_type == "savings":
+        while True:
+            interest_rate = int(input("Enter interest rate (example, 5 for 5%): "))
+            if interest_rate >= 20:
+                print("Error: Interest rate must be less than 20")
+                continue
+            break
         min_balance = int(input("Enter minimum balance: "))
         query = """
             INSERT INTO Accounts (account_number, account_type, balance, interest_rate, min_balance, customer_id)
             VALUES (%s, %s, %s, %s, %s, %s)
         """
         values = (account_number, account_type, initial_balance, interest_rate, min_balance, customer_id)
-    elif account_type == "Current":
+    elif account_type == "current":
         overdraft_limit = int(input("Enter overdraft limit: "))
         query = """
             INSERT INTO Accounts (account_number, account_type, balance, overdraft_limit, customer_id)
@@ -184,33 +194,32 @@ def create_account(cursor, connection):
     try:
         cursor.execute(query, values)
         connection.commit()
-        print(f"{account_type} Account with number {account_number} created successfully.")
+        print(f"Account {account_number} created successfully.")
     except mysql.connector.Error as e:
-        print(f"Database error: {e}")
+        print(f"Database related error: {e}")
 
 def account_choice():
+
     db_connection = DataBaseConnection()
     cursor = db_connection.cursor
     conn = db_connection.conn
+    
     while True:
         print("\nChoose an action:")
-        print("1. Create Account")
-        print("2. Manage Customers")
-        print("3. Delete Account")
-        print("4. Operate Existing Account")
-        print("5. Exit")
+        print("1. Manage Customers")
+        print("2. Create Account")
+        print("3. Operate Existing Account")
+        print("4. Exit")
 
         choice = input("Enter your choice: ")
         if choice == '1':
-            create_account(cursor, conn)  
+            customer_menu(cursor, conn) 
         elif choice == '2':
-            customer_menu(cursor, conn)
+            create_account(cursor, conn) 
+        
         elif choice == '3':
-            account_number = input("Enter account number to delete: ")
-            delete_account(cursor, conn, account_number)  
-        elif choice == '4':
             operate_existing_account(cursor)
-        elif choice == '5':
+        elif choice == '4':
             print("*** Exiting ***")
             break
         else:
