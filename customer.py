@@ -10,12 +10,8 @@ def validate_phone_number(phone_number):
         return None
         
     try:
-        # Parse the phone number
         parsed_number = phonenumbers.parse(phone_number, None)
-        
-        # Check if the number is valid
         if phonenumbers.is_valid_number(parsed_number):
-            # Format in international format for consistency
             formatted_number = phonenumbers.format_number(
                 parsed_number, 
                 phonenumbers.PhoneNumberFormat.INTERNATIONAL
@@ -32,12 +28,12 @@ def get_customer(cursor, customer_id):
         cursor.execute("SELECT customer_id, name, email, phone_number FROM Customers WHERE customer_id = %s", (customer_id,))
         customer = cursor.fetchone()
         if customer:
-            print("Customer found")  
-            return customer
-        print(f"Customer {customer_id} not found.")
+            print(f"Customer found : {customer}")  
+        else:
+            print(f"Customer {customer_id} not found.")
         return None
     except mysql.connector.Error as e:
-        print(f"Error retrieving customer: {e}")
+        print(f"An error occurred while retrieving customer: {e}")
         return None
 
 def add_customer(cursor, conn):
@@ -46,14 +42,14 @@ def add_customer(cursor, conn):
         email = input("Enter customer email: ")
 
         while True:
-            phone_input = input("Enter customer phone number: ")
+            phone_input = input("Enter customer's phone number: ")
             valid_phone = validate_phone_number(phone_input)
             
             if valid_phone:
                 phone_number = valid_phone
                 break
             else:
-                print("Invalid phone number")
+                print("Invalid phone number, please retry.")
         
         cursor.execute(
             "INSERT INTO Customers (name, email, phone_number) VALUES (%s, %s, %s)",
@@ -62,7 +58,7 @@ def add_customer(cursor, conn):
         conn.commit()
         print("Customer added successfully.")
     except mysql.connector.Error as e:
-        print(f"Error adding customer: {e}")
+        print(f"An error occurred while adding customer: {e}")
 
 def update_customer(cursor, conn, customer_id):
     try:
@@ -92,7 +88,7 @@ def update_customer(cursor, conn, customer_id):
                 
                 break
             else:
-                print("Invalid phone number, or keep the current value by pressing enter")
+                print("Invalid phone number, retry with a valid one or keep the current value by pressing enter")
 
         cursor.execute(
             "UPDATE Customers SET name = %s, email = %s, phone_number = %s WHERE customer_id = %s",
@@ -102,7 +98,7 @@ def update_customer(cursor, conn, customer_id):
         print("Customer updated successfully.")
         
     except mysql.connector.Error as e:
-        print(f"Error updating the database: {e}")
+        print(f"An error occurred while updating the database: {e}")
 
 def delete_customer(cursor, conn, customer_id):
     try:
@@ -120,21 +116,17 @@ def delete_customer(cursor, conn, customer_id):
             print("Deletion cancelled.")
             return False
             
-        # Get all accounts for this customer
         cursor.execute("SELECT account_number FROM Accounts WHERE customer_id = %s", (customer_id,))
         accounts = cursor.fetchall()
         
-        # For each account, delete related transactions first
         for account in accounts:
             account_number = account[0]
             print(f"Deleting transactions for account {account_number}...")
             cursor.execute("DELETE FROM Transactions WHERE account_number = %s", (account_number,))
-        
-        # Delete all accounts for this customer
+            
         print(f"Deleting accounts for customer {customer_id}...")
         cursor.execute("DELETE FROM Accounts WHERE customer_id = %s", (customer_id,))
         
-        # delete the customer
         print(f"Deleting customer {customer_id}...")
         cursor.execute("DELETE FROM Customers WHERE customer_id = %s", (customer_id,))
         
@@ -143,7 +135,7 @@ def delete_customer(cursor, conn, customer_id):
         return True
         
     except mysql.connector.Error as e:
-        print(f"Error deleting customer: {e}")
+        print(f"An error occurred while deleting customer: {e}")
         conn.rollback()  # back up any changes in case of error
         return False
 

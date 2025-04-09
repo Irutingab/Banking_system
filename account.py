@@ -32,17 +32,14 @@ class Account:
                 "INSERT INTO Transactions (account_number, transaction_type, amount, transaction_date, description) VALUES (%s, %s, %s, %s, %s)",
                 (self._account_number, transaction_type, amount, transaction_date, description)
             )
-            
-            # Update the last_active date
             self.cursor.execute(
                 "UPDATE Accounts SET last_active = %s WHERE account_number = %s",
                 (transaction_date.date(), self._account_number)
-            )
-            
+            ) 
             self.conn.commit()
             return True
         except mysql.connector.Error as e:
-            print(f"Error recording transaction: {e}")
+            print(f"An error occurred while recording transaction: {e}")
             self.conn.rollback()
             return False
 
@@ -53,16 +50,16 @@ class Account:
                 if not self._account_exists():
                     print(f"Account {self._account_number} does not exist.")
                     return
-                balance_before = self._balance
+                
                 self._balance += amount
-                self._update_balance()  # Update the database with the new balance
-                self._record_transaction('Deposit', amount)  # save the transaction
+                self._update_balance()  
+                self._record_transaction('Deposit', amount) 
                 self._update_last_active()
-                print(f"Deposited {amount}. Previous balance: {balance_before}, New balance: {self._balance}")
+                print(f"Deposited {amount} New balance: {self._balance}")
             else:
                 print("Amount must be positive.")
         except ValueError:
-            print("Please enter a valid number.")
+            print("Please enter a valid number from the displayed list.")
         except Exception as e:
             print(f"An error occurred during your deposit, Kindly try again! {e}")
 
@@ -73,10 +70,10 @@ class Account:
                 if not self._account_exists():
                     print(f"Account {self._account_number} does not exist.")
                     return
-                if self._balance - amount >= 0:  # Ensure enough funds
+                if self._balance - amount >= 0:  
                     self._balance -= amount
-                    self._update_balance()  # Update the balance in the same account
-                    self._record_transaction('Withdrawal', amount)  # save the transaction
+                    self._update_balance() 
+                    self._record_transaction('Withdrawal', amount) 
                     self._update_last_active()
                     print(f"Withdrew {amount}.  New balance: {self._balance}")
                 else:
@@ -84,24 +81,22 @@ class Account:
             else:
                 print("Amount must be positive.")
         except ValueError:
-            print("Please enter a valid number.")
+            print("Please enter a valid number from the displayed list.")
         except Exception as e:
-            print(f"An error occurred during your withdrawal, Please try again! {e}")
+            print(f"An error occurred during your withdrawal, Kindly try again! {e}")
 
     def display_balance(self):
         print(f"Account {self._account_number} Balance: {self._balance}")
 
     def _account_exists(self):
         try:
-            self.cursor.execute("SELECT 1 FROM Accounts WHERE account_number = %s", (self._account_number,))
+            self.cursor.execute("SELECT FROM Accounts WHERE account_number = %s", (self._account_number,))
             return self.cursor.fetchone() is not None
         except mysql.connector.Error as e:
             print(f"An error occurred in the database, Please try again!: {e}")
             return False
-
     
     def _update_balance(self):
-        """Update account balance in database"""
         try:
             self.cursor.execute(
                 "UPDATE Accounts SET balance = %s WHERE account_number = %s",
@@ -111,7 +106,7 @@ class Account:
             return True
         except Exception as e:
             self.conn.rollback()
-            print(f"Error updating balance: {e}")
+            print(f"An error occurred while updating balance: {e}")
             return False
 
     def _fetch_account_status(self):
@@ -124,8 +119,8 @@ class Account:
             if status_result:
                 self._account_status = status_result[0]
             else:
-                self._account_status = 'status not defined'  
+                self._account_status = 'undefined account status'  
         except mysql.connector.Error as e:
-            print(f"Error fetching account status: {e}")    
+            print(f"An error occurred while fetching account status: {e}")    
         return self._account_status
 

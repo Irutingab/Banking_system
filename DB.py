@@ -24,7 +24,7 @@ class DataBaseConnection:
             db_name = os.getenv("DB_NAME")
 
             if not all([db_host, db_user, db_password, db_name]):
-                raise ValueError("A few credential are missing.")
+                raise ValueError("A few credentials are missing.")
 
             self.conn = mysql.connector.connect(
                 host=db_host,
