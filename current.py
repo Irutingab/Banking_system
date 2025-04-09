@@ -288,6 +288,7 @@ def account_choice():
 
     db_connection = DataBaseConnection()
     cursor = db_connection.cursor
+    
     conn = db_connection.conn
     
     while True:
