@@ -1,16 +1,16 @@
 import mysql.connector
 import phonenumbers
 
-
 def validate_phone_number(phone_number):
 
     if any(char.isalpha() for char in phone_number):
         return None
     if not all(c.isdigit() or c in '+ ()-' for c in phone_number):
         return None
-        
+
     try:
-        parsed_number = phonenumbers.parse(phone_number, None)
+        parsed_number = phonenumbers.parse(phone_number, "RW")
+        
         if phonenumbers.is_valid_number(parsed_number):
             formatted_number = phonenumbers.format_number(
                 parsed_number, 
@@ -22,6 +22,7 @@ def validate_phone_number(phone_number):
     except phonenumbers.NumberParseException:
         return None
 
+
 def get_customer(cursor, customer_id):
     try:
         print(f"retrieving customer's details using their IDs: {customer_id}")  
@@ -29,9 +30,10 @@ def get_customer(cursor, customer_id):
         customer = cursor.fetchone()
         if customer:
             print(f"Customer found : {customer}")  
+            return customer  # Return the customer details
         else:
             print(f"Customer {customer_id} not found.")
-        return None
+            return None
     except mysql.connector.Error as e:
         print(f"An error occurred while retrieving customer: {e}")
         return None
@@ -88,7 +90,7 @@ def update_customer(cursor, conn, customer_id):
                 
                 break
             else:
-                print("Invalid phone number, retry with a valid one or keep the current value by pressing enter")
+                print("Invalid phone number, only rwandan phone numbers are accepted.")
 
         cursor.execute(
             "UPDATE Customers SET name = %s, email = %s, phone_number = %s WHERE customer_id = %s",
@@ -158,7 +160,7 @@ def customer_menu(cursor, conn):
             customer_id = input("Enter customer ID: ")
             customer = get_customer(cursor, customer_id)
             if customer:
-                update_customer(cursor, conn, customer_id)
+                update_customer(cursor, conn, customer_id)  # Call update_customer after retrieving details
         elif choice == '1':
             add_customer(cursor, conn)
         elif choice == '4': 
