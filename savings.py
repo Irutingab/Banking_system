@@ -5,9 +5,11 @@ from datetime import datetime
 class SavingsAccount(Account):
     def __init__(self, account_number, balance, interest_rate, min_balance, customer_id):
         super().__init__(account_number, int(balance), 'savings', customer_id) 
+        
         self._interest_rate = int(interest_rate)  
         self._min_balance = int(min_balance)
         self._fetch_account_status()  
+        
     def _fetch_account_status(self):
         try:
             self.cursor.execute(
@@ -31,8 +33,7 @@ class SavingsAccount(Account):
             )
             self.conn.commit()
         except mysql.connector.Error as e:
-            print(f"Error updating last active date: {e}")
-            self.conn.rollback()
+            print(f"An error occurred while updating last active date: {e}")
 
     def _create_account(self):
         try:
@@ -43,7 +44,7 @@ class SavingsAccount(Account):
             self.conn.commit()
             print(f"Savings Account {self._account_number} created in the database.")
         except mysql.connector.Error as e:
-            print(f"Database error: {e}")
+            print(f"Check your DB connection: {e}")
 
     def withdraw(self, amount):
         try:
@@ -60,27 +61,22 @@ class SavingsAccount(Account):
 
             interest = amount * 0.05
             total_withdrawal = amount + interest
-            print(f"Trying to withdraw {amount} with an interest of {interest}. Total withdrawal: {total_withdrawal}")
+            print(f"Your withdrawal amount is {amount} with an interest of {interest}. Your total withdrawal is : {total_withdrawal}")
 
-            if self._balance - total_withdrawal >= self._min_balance:
+            if self._balance - total_withdrawal > self._min_balance:
                 self._balance -= total_withdrawal
                 self._update_balance()
                 if self._record_transaction('Withdrawal', amount):
-                    self._update_last_active()  # Update last_active after successful transaction
-                    self._update_balance()  # Update balance after adding interest
+                    self._update_last_active()  
+                    self._update_balance()  
                     print(f"Withdrew {amount}. Interest: {interest}. New balance: {self._balance}")
                     return True
-                else:
-                    # Rollback balance update if transaction recording fails
-                    self._balance += total_withdrawal
-                    self._update_balance()
-                    return False
             else:
-                print("Withdrawal denied: Insufficient funds to cover withdrawal and fee.")
+                print("Withdrawal denied: Insufficient funds to cover withdrawal and minimum balance.")
                 return False
 
         except ValueError:
-            print("Amount must be a valid number.")
+            print("Amount must be valid.")
             return False
         except Exception as e:
             print(f"An error occurred during withdrawal: {e}")
@@ -90,37 +86,29 @@ class SavingsAccount(Account):
         try:
             amount = int(amount)
             if amount <= 0:
-                print("Deposit amount must be positive.")
+                print("You can't deposit a negative amount.")
                 return False
 
             self._balance += amount
             if self._update_balance():
                 if self._record_transaction('Deposit', amount):
-                    self._update_last_active()  # Update last_active after successful transaction
+                    self._update_last_active()  
                     print(f"Deposited {amount}. New balance: {self._balance}")
                     return True
-                else:
-                    # Rollback balance update if transaction recording fails
-                    self._balance -= amount
-                    self._update_balance()
-                    return False
             else:
-                # Rollback balance update if balance update fails
                 self._balance -= amount
                 return False
 
         except ValueError:
-            print("Please enter a valid number.")
+            print("Please enter a valid number from the displayed list.")
             return False
         except Exception as e:
             print(f"An error occurred during deposit transaction: {e}")
             return False
 
     def _record_transaction(self, transaction_type, amount):
-        """Record a transaction in the database."""
         try:
             transaction_date = datetime.now()
-            # Adjust the query to match the actual schema of the Transactions table
             self.cursor.execute(
                 "INSERT INTO Transactions (account_number, transaction_type, amount, transaction_date) VALUES (%s, %s, %s, %s)",
                 (self._account_number, transaction_type, amount, transaction_date)
