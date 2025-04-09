@@ -225,7 +225,7 @@ def create_account(cursor, connection):
         if cursor.fetchone():
             break
         else:
-            print("The provided customer ID does not exist. Please retry.")
+            print("The provided customer ID does not exist")
 
     while True:
         account_number = input("Enter a unique 9-digit account number: ")
