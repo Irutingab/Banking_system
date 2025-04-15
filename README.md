@@ -116,5 +116,3 @@ This is a simple banking system implemented in Python. It supports operations fo
   ```bash
   python main.py
   ```
-
-- Follow the prompts to perform various operations.
