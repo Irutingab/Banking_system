@@ -87,7 +87,15 @@ This is a simple banking system implemented in Python. It supports operations fo
           INDEX (account_number) d) REFERENCES Customers(customer_id) ON DELETE CASCADE,
       ;  INDEX (account_number) 
 
-      
+      - sql a table na,ed "Customers" with the following schema:
+CREATE TABLE Customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
       - sql a table named "Transactions" with the following schema:
       CREATE TABLE Transactions (
           transaction_id INT AUTO_INCREMENT PRIMARY KEY,
