@@ -2,121 +2,119 @@
 
 This is a simple banking system implemented in Python. It supports operations for Savings and Current accounts, including deposits, withdrawals, balance checks, and interest application for savings accounts. The system also records transactions in a MySQL database. Each account is uniquely identified by its "account_number".
 
-2. Features
-- add a user/customer
-- Create an account (Savings or Current): an account is assigned to an existing user/customer
-- Deposit and withdraw
-  - Savings Accounts: Withdrawals include a 5% interest of the withdrawed amount.
-  - Current Accounts: Overdraft limits are supported.
+2. Requirements
 
-- Delete accounts
-  - Accounts are automatically set to *deleted* after two years of inactivity  
+- Install Python 3.12: [Download Python](https://www.python.org/downloads/)
+- Install MySQL server: [Download MySQL](https://dev.mysql.com/downloads/)
+- Install required Python libraries:
+  - Install `mysql-connector-python`:
+    ```bash
+    pip install mysql-connector-python
+    ```
+  - Install `python-dotenv`:
+    ```bash
+    pip install python-dotenv
+    ```
+  - Install `faker`:
+    ```bash
+    pip install faker
+    ```
+  - Install `queue`:
+    ```bash
+    pip install queue
+    ```
 
-- Deactivate accounts
-  - Accounts are automatically deactivated or set to *Inactive*after five months of inactivity.
-- View user's/customer's details and update them
+3. Project Setup
 
-  - Users can selectively update specific fields or leave them unchanged.
-- Record transactions and save them in the database
-- Apply interest to savings accounts
-- Edit account's specificities
-   - Savings accounts: update interest_rate, or minimum_balance
-   - Current accounts: update overdraf limits depending on how much users are deposting
+Step 1: Clone the Repository
+- Clone the repository and navigate to the project directory:
+  ```bash
+  git clone <repository-url>
+  cd <repository-directory>
+  ```
 
-3. Project Structure
-- "env/" - Environment configuration files
-- "Databaseconnection: DB.py/" - Database connection logic
-- "account.py" - Base class for account operations
-- "current.py" - Logic for current accounts
-- "savings.py" - Logic for savings accounts
-- "customer.py" - Logic for managing customer details
-- "transactions.py" - Logic for recording and managing transactions
-- "generate_fake_data" - Logic for generating random data from faker
-- "account_activity" - Logic for checking if accounts are active, inactive, or deleted
-- "main.py" - Entry point for the application
+ Step 2: Set Up the MySQL Database
+- Create a database named "banking_system":
+  ```sql
+  CREATE DATABASE banking_system;
+  ```
 
-4. Requirements
+ Step 3: Create Database Tables
+- Use the following function to create the required tables in the database:
+  ```python
+  from DB import DataBaseConnection
 
-- Python 3.12
-- MySQL server
-- mysql-connector-python library
-- python-dotenv library
-- Faker library
-- queue library
+  def create_tables(db_connection):
+      """
+      Creates the required tables for the banking system in the database.
+      """
+      cursor = db_connection.get_cursor()
+      try:
+          # Create Customers table
+          cursor.execute("""
+              CREATE TABLE IF NOT EXISTS Customers (
+                  customer_id INT AUTO_INCREMENT PRIMARY KEY,
+                  name VARCHAR(100) NOT NULL,
+                  email VARCHAR(100) UNIQUE NOT NULL,
+                  phone_number VARCHAR(20) NOT NULL,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              );
+          """)
 
-5. Project Setup
+          # Create Accounts table
+          cursor.execute("""
+              CREATE TABLE IF NOT EXISTS Accounts (
+                  account_id INT AUTO_INCREMENT PRIMARY KEY,
+                  account_number CHAR(9) UNIQUE NOT NULL,
+                  customer_id INT NOT NULL,
+                  account_type ENUM('Savings', 'Current') NOT NULL,
+                  balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                  interest_rate DECIMAL(5, 2) DEFAULT NULL,
+                  min_balance DECIMAL(10, 2) DEFAULT NULL,
+                  overdraft_limit DECIMAL(10, 2) DEFAULT NULL,
+                  account_status ENUM('active', 'disactivated') NOT NULL DEFAULT 'active',
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE,
+                  INDEX (account_number)
+              );
+          """)
 
-- Clone the repository:
+          # Create Transactions table
+          cursor.execute("""
+              CREATE TABLE IF NOT EXISTS Transactions (
+                  transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+                  account_number CHAR(9) NOT NULL,
+                  transaction_type ENUM('Deposit', 'Withdrawal', 'Interest') NOT NULL,
+                  amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+                  transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (account_number) REFERENCES Accounts(account_number) ON DELETE CASCADE,
+                  INDEX (account_number)
+              );
+          """)
 
-    git clone <repository-url>
-    cd <repository-directory>
+          db_connection.get_connection().commit()
+          print("Tables created successfully.")
+      except Exception as e:
+          print(f"An error occurred while creating tables: {e}")
+          db_connection.get_connection().rollback()
+      finally:
+          cursor.close()
 
+  def setup_database():
+      db_connection = DataBaseConnection()
+      create_tables(db_connection)
+      db_connection.get_cursor().close()
+      db_connection.get_connection().close()
+      print("Database setup completed.")
 
-- Install the required packages:
-  
-    pip install mysql-connector-python python-dotenv faker queue
+  if __name__ == "__main__":
+      setup_database()
+  ```
 
+ Step 4: Run the Project
+- Run the "main.py" script to start the application:
+  ```bash
+  python main.py
+  ```
 
-- Set up the MySQL database:
-    - Create a database named "banking_system".
-    
-      - ```sql a table named "Customers" with the following schema:
-      CREATE TABLE Customers (
-          customer_id INT AUTO_INCREMENT PRIMARY KEY,
-          name VARCHAR(100) NOT NULL,ENT PRIMARY KEY,
-          email VARCHAR(100) UNIQUE NOT NULL,
-          phone_number VARCHAR(20), NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ```
-      ```
-    - 
-```sql a table named "Accounts" with the following schema:
-      CREATE TABLE Accounts (
-          account_id INT AUTO_INCREMENT PRIMARY KEY,  
-          account_number CHAR(9) UNIQUE NOT NULL,  ,  
-          customer_id INT NOT NULL,IQUE NOT NULL,  
-          account_type ENUM('Savings', 'Current') NOT NULL,
-          balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,ULL,
-          interest_rate DECIMAL(5, 2) DEFAULT NULL,  0,
-          min_balance DECIMAL(10, 2) DEFAULT NULL,   
-          overdraft_limit DECIMAL(10, 2) DEFAULT NULL, 
-          account_status ENUM('active', 'disactivated') NOT NULL DEFAULT 'active', -- Indicates the account status
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,OT NULL DEFAULT 'active', -- Indicates the account status
-          FOREIGN KEY (customer_id) REFERENCES Customers(customer_id) ON DELETE CASCADE,
-          INDEX (account_number) d) REFERENCES Customers(customer_id) ON DELETE CASCADE,
-      ;  INDEX (account_number) 
-
-      - sql a tables named "Customers" with thr following schema:
-      CREATE TABLE Customers (
-    customer_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    phone_number VARCHAR(20),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-      
-      - sql a table named "Transactions" with the following schema:
-      CREATE TABLE Transactions (
-          transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-          account_number CHAR(9) NOT NULL,  PRIMARY KEY,
-          transaction_type ENUM('Deposit', 'Withdrawal', 'Interest') NOT NULL,
-          amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),  rest') NOT NULL,
-          transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (account_number) REFERENCES Accounts(account_number) ON DELETE CASCADE,
-          INDEX (account_number)  ber) REFERENCES Accounts(account_number) ON DELETE CASCADE,
-      );  INDEX (account_number)  
-     
-- Configure the database connection:
-    - env a ".env" file in the project root with the following content:
-      DB_HOST=localhost
-      DB_USER=rootlhost
-      DB_PASSWORD=your_password
-      DB_NAME=banking_system
-     
-6. Run the Project
-- Run the "main.py" script:
-
-    - python main.py
-    
 - Follow the prompts to perform various operations.
