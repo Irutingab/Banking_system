@@ -120,8 +120,8 @@ def main():
     conn = db_connection.get_connection()
 
     try:
-        #generate_customers(cursor, conn)
-        #generate_accounts(cursor, conn)
+        generate_customers(cursor, conn)
+        generate_accounts(cursor, conn)
         generate_transactions(cursor, conn)
     except Exception as e:
         print(f"An error occurred while generating data: {e}")
