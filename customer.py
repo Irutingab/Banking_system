@@ -29,8 +29,8 @@ def get_customer(cursor, customer_id):
         cursor.execute("SELECT customer_id, name, email, phone_number FROM Customers WHERE customer_id = %s", (customer_id,))
         customer = cursor.fetchone()
         if customer:
-            print(f"Customer found : {customer}")  
-            return customer  # Return the customer details
+            print("Customer found")  
+            return customer  
         else:
             print(f"Customer {customer_id} not found.")
             return None
@@ -160,7 +160,7 @@ def customer_menu(cursor, conn):
             customer_id = input("Enter customer ID: ")
             customer = get_customer(cursor, customer_id)
             if customer:
-                update_customer(cursor, conn, customer_id)  # Call update_customer after retrieving details
+                update_customer(cursor, conn, customer_id)  
         elif choice == '1':
             add_customer(cursor, conn)
         elif choice == '4': 
