@@ -26,20 +26,20 @@ This is a simple banking system implemented in Python. It supports operations fo
 
 3. Project Setup
 
-Step 1: Clone the Repository
+### Step 1: Clone the Repository
 - Clone the repository and navigate to the project directory:
   ```bash
   git clone <repository-url>
   cd <repository-directory>
   ```
 
- Step 2: Set Up the MySQL Database
+### Step 2: Set Up the MySQL Database
 - Create a database named "banking_system":
   ```sql
   CREATE DATABASE banking_system;
   ```
 
- Step 3: Create Database Tables
+### Step 3: Create Database Tables
 - Use the following function to create the required tables in the database:
   ```python
   from DB import DataBaseConnection
@@ -111,7 +111,7 @@ Step 1: Clone the Repository
       setup_database()
   ```
 
- Step 4: Run the Project
+### Step 4: Run the Project
 - Run the "main.py" script to start the application:
   ```bash
   python main.py
