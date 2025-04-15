@@ -22,19 +22,19 @@ def insert_batch(cursor, conn, queue, query):
         cursor.executemany(query, batch)
         conn.commit()
 
-#def generate_customers(cursor, conn, num_records=1000000):
- #   print("Generating customers")
-  #  queue = deque()
-   # query = "INSERT INTO Customers (name, email, phone_number) VALUES (%s, %s, %s)"
-    #for _ in range(num_records):
-     #   name = fake.name()
-      #  email = fake.unique.email()
-       # phone_number = generate_rwandan_phone_number()
-        #queue.append((name, email, phone_number))
-        #if len(queue) >= 1000:  
-         #   insert_batch(cursor, conn, queue, query)
-    #insert_batch(cursor, conn, queue, query)  
-    #print(f"{num_records} customers inserted successfully.")
+def generate_customers(cursor, conn, num_records=1000000):
+    print("Generating customers")
+    queue = deque()
+    query = "INSERT INTO Customers (name, email, phone_number) VALUES (%s, %s, %s)"
+    for _ in range(num_records):
+        name = fake.name()
+        email = fake.unique.email()
+        phone_number = generate_rwandan_phone_number()
+        queue.append((name, email, phone_number))
+        if len(queue) >= 1000:  
+            insert_batch(cursor, conn, queue, query)
+    insert_batch(cursor, conn, queue, query)  
+    print(f"{num_records} customers inserted successfully.")
 
 def get_customer_id_range(cursor):
     cursor.execute("SELECT MIN(customer_id), MAX(customer_id) FROM Customers")
@@ -44,45 +44,46 @@ def get_all_customer_ids(cursor):
     cursor.execute("SELECT customer_id FROM Customers")
     return [row[0] for row in cursor.fetchall()]  
 
-#def generate_accounts(cursor, conn, num_records=1000000):
- #   print("Generating accounts")
-  #  queue = deque()
-   # query = """
-    #    INSERT INTO Accounts (account_number, customer_id, account_type, balance, interest_rate, min_balance, overdraft_limit, account_status, created_at)
-     #   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-    #"""
-    #customer_ids = get_all_customer_ids(cursor)  
-    #if not customer_ids:
-     #   raise ValueError("No customers found in the database")
+def generate_accounts(cursor, conn, num_records=1000000):
+    print("Generating accounts")
+    queue = deque()
+    query = """
+        INSERT INTO Accounts (account_number, customer_id, account_type, balance, interest_rate, min_balance, overdraft_limit, account_status, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    customer_ids = get_all_customer_ids(cursor)  
+    if not customer_ids:
+        raise ValueError("No customers found in the database")
 
     #Fetch valid ENUM values for account_status
-    #cursor.execute("SHOW COLUMNS FROM Accounts LIKE 'account_status'")
-    #account_status_enum_result = cursor.fetchone()
-    #if not account_status_enum_result:
-     #   raise ValueError("The 'account_status' column does not exist in the Accounts table. Please check the database schema.")
+    cursor.execute("SHOW COLUMNS FROM Accounts LIKE 'account_status'")
+    account_status_enum_result = cursor.fetchone()
+    if not account_status_enum_result:
+        raise ValueError("The 'account_status' column does not exist in the Accounts table. Please check the database schema.")
 
-    #account_status_enum = account_status_enum_result[1]  # Extract ENUM definition
-    #valid_account_statuses = account_status_enum.replace("enum(", "").replace(")", "").replace("'", "").split(",")
+    account_status_enum = account_status_enum_result[1]  # Extract ENUM definition
+    valid_account_statuses = account_status_enum.replace("enum(", "").replace(")", "").replace("'", "").split(",")
+    
     #Ensure account_status has valid values
-    #if not valid_account_statuses:
-     #   raise ValueError("No valid account statuses found.")
+    if not valid_account_statuses:
+        raise ValueError("No valid account statuses found.")
 
-    #for _ in range(num_records):
-     #   account_number = fake.unique.random_number(digits=9, fix_len=True)
-      #  customer_id = random.choice(customer_ids)  
-       # account_type = random.choice(['Savings', 'Current'])
-        #balance = round(random.uniform(0, 100000), 2)
-        #interest_rate = round(random.uniform(0, 20), 2) if account_type == 'Savings' else None
-        #min_balance = round(random.uniform(0, 5000), 2) if account_type == 'Savings' else None
-        #overdraft_limit = round(random.uniform(0, 10000), 2) if account_type == 'Current' else None
-        #account_status = random.choice(valid_account_statuses) 
-        #created_at = random_date().strftime('%Y-%m-%d %H:%M:%S')
-        #queue.append((account_number, customer_id, account_type, balance, interest_rate, min_balance, overdraft_limit, account_status, created_at))
-        #if len(queue) >= 1000: 
+    for _ in range(num_records):
+        account_number = fake.unique.random_number(digits=9, fix_len=True)
+        customer_id = random.choice(customer_ids)  
+        account_type = random.choice(['Savings', 'Current'])
+        balance = round(random.uniform(0, 100000), 2)
+        interest_rate = round(random.uniform(0, 20), 2) if account_type == 'Savings' else None
+        min_balance = round(random.uniform(0, 5000), 2) if account_type == 'Savings' else None
+        overdraft_limit = round(random.uniform(0, 10000), 2) if account_type == 'Current' else None
+        account_status = random.choice(valid_account_statuses) 
+        created_at = random_date().strftime('%Y-%m-%d %H:%M:%S')
+        queue.append((account_number, customer_id, account_type, balance, interest_rate, min_balance, overdraft_limit, account_status, created_at))
+        if len(queue) >= 1000: 
             
-         #   insert_batch(cursor, conn, queue, query)
-          #  insert_batch(cursor, conn, queue, query) 
-           # print(f"{num_records} accounts inserted successfully.")
+            insert_batch(cursor, conn, queue, query)
+            insert_batch(cursor, conn, queue, query) 
+            print(f"{num_records} accounts inserted successfully.")
 
 def get_all_account_numbers(cursor):
     cursor.execute("SELECT account_number FROM Accounts")
