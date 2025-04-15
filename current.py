@@ -5,13 +5,29 @@ from customer import customer_menu
 from DB import DataBaseConnection
 from datetime import datetime
 
+
 class CurrentAccount(Account):
     def __init__(self, account_number, balance, overdraft_limit, customer_id):
-        super().__init__(account_number, int(balance), 'current', customer_id)  
+        super().__init__(account_number, int(balance), 'current', customer_id)
         
         if overdraft_limit is None or int(overdraft_limit) == 0:
             raise ValueError("Overdraft limit cannot be null")
         self._overdraft_limit = int(overdraft_limit)
+        self._fetch_account_status()
+
+    def _fetch_account_status(self):
+        try:
+            self.cursor.execute(
+                "SELECT account_status FROM Accounts WHERE account_number = %s",
+                (self._account_number,)
+            )
+            status_result = self.cursor.fetchone()
+            if status_result:
+                self._account_status = status_result[0]
+            else:
+                self._account_status = 'status not defined'
+        except mysql.connector.Error as e:
+            print(f"Error fetching account status: {e}")
 
     def _create_account(self):
         try:
@@ -26,6 +42,12 @@ class CurrentAccount(Account):
 
     def deposit(self, amount):
         try:
+            self._fetch_account_status()
+
+            if self._account_status == 'deleted':
+                print("This account is deleted, deposits are not allowed.")
+                return False
+
             amount = int(amount)
             if amount <= 0:
                 print("Deposit amount must be greater than zero.")
@@ -50,14 +72,22 @@ class CurrentAccount(Account):
 
     def withdraw(self, amount):
         try:
-            amount = int(amount) 
-            print(f"Current balance: {self._balance}, Overdraft limit: {self._overdraft_limit}")  
+            self._fetch_account_status()
+
+            if self._account_status == 'inactive':
+                print("This account is currently inactive. You can only make deposits.")
+                return False
+            elif self._account_status == 'deleted':
+                print("This account is deleted, deposits are not allowed.")
+                return False
+
+            amount = int(amount)
+            print(f"Current balance: {self._balance}, Overdraft limit: {self._overdraft_limit}")
             if self._balance - amount >= -self._overdraft_limit:
                 self._balance -= amount
-                self._update_balance()  
+                self._update_balance()
                 self._record_transaction('Withdrawal', amount)
-                self._update_last_active()  
-                
+                print(f"Withdrew {amount}. New balance: {self._balance}")
                 return True
             else:
                 print("Overdraft limit exceeded, Please try again!")
@@ -83,25 +113,13 @@ class CurrentAccount(Account):
             self.conn.rollback()
             return False
 
-    def _update_last_active(self):
-        try:
-            last_active_date = datetime.now()
-            self.cursor.execute(
-                "UPDATE Accounts SET last_active = %s WHERE account_number = %s",
-                (last_active_date, self._account_number)
-            )
-            self.conn.commit()
-        except mysql.connector.Error as e:
-            print(f"An error occurred while updating last_active: {e}")
-            self.conn.rollback()
-
 def update_account(cursor, conn, account_number):
     try:
         cursor.execute("SELECT account_type, overdraft_limit, interest_rate, min_balance FROM Accounts WHERE account_number = %s", (account_number,))
         Existing_info = cursor.fetchone()
         
         if not Existing_info:
-            print("Account details not found.")
+            print("Account details not found in the database.")
             return
 
         account_type, current_overdraft, current_interest, current_min_balance = Existing_info
@@ -284,29 +302,46 @@ def create_account(cursor, connection):
     except mysql.connector.Error as e:
         print(f"Database related error: {e}")
 
+def check_account_status(cursor):
+    account_number = input("Enter the account number to verify its status: ")
+    try:
+        cursor.execute(
+            "SELECT account_status FROM Accounts WHERE account_number = %s",
+            (account_number,)
+        )
+        result = cursor.fetchone()
+        if result:
+            account_status = result[0]
+            print(f"Account {account_number} is currently {account_status}.")
+        else:
+            print(f"Account {account_number} does not exist.")
+    except mysql.connector.Error as e:
+        print(f"An error occurred while checking account status: {e}")
+
 def account_choice():
 
     db_connection = DataBaseConnection()
-    cursor = db_connection.cursor
-    
-    conn = db_connection.conn
+    cursor = db_connection.get_cursor()
+    conn = db_connection.get_connection()
     
     while True:
         print("\nChoose an action:")
         print("1. Manage Customers")
         print("2. Create Account")
         print("3. Operate Existing Account")
-        print("4. Exit")
+        print("4. Check Account Status") 
+        print("5. Exit")
 
         choice = input("Enter your choice: ")
         if choice == '1':
             customer_menu(cursor, conn) 
         elif choice == '2':
             create_account(cursor, conn) 
-        
         elif choice == '3':
             operate_existing_account(cursor)
-        elif choice == '4':
+        elif choice == '4': 
+            check_account_status(cursor)
+        elif choice == '5':
             print("___ Exiting ___")
             break
         else:

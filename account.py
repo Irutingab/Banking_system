@@ -24,18 +24,12 @@ class Account:
             print(f"Error connecting to the database: {e}")
             
     def _record_transaction(self, transaction_type, amount, description=None):
-
         try:
             transaction_date = datetime.now()
-            
             self.cursor.execute(
                 "INSERT INTO Transactions (account_number, transaction_type, amount, transaction_date, description) VALUES (%s, %s, %s, %s, %s)",
                 (self._account_number, transaction_type, amount, transaction_date, description)
             )
-            self.cursor.execute(
-                "UPDATE Accounts SET last_active = %s WHERE account_number = %s",
-                (transaction_date.date(), self._account_number)
-            ) 
             self.conn.commit()
             return True
         except mysql.connector.Error as e:
@@ -54,7 +48,6 @@ class Account:
                 self._balance += amount
                 self._update_balance()  
                 self._record_transaction('Deposit', amount) 
-                self._update_last_active()
                 print(f"Deposited {amount} New balance: {self._balance}")
             else:
                 print("Amount must be positive.")
@@ -74,10 +67,7 @@ class Account:
                     self._balance -= amount
                     self._update_balance() 
                     self._record_transaction('Withdrawal', amount) 
-                    self._update_last_active()
                     print(f"Withdrew {amount}.  New balance: {self._balance}")
-                else:
-                    print("Insufficient funds.")
             else:
                 print("Amount must be positive.")
         except ValueError:
@@ -109,18 +99,5 @@ class Account:
             print(f"An error occurred while updating balance: {e}")
             return False
 
-    def _fetch_account_status(self):
-        try:
-            self.cursor.execute(
-                "SELECT account_status FROM Accounts WHERE account_number = %s",
-                (self._account_number,)
-            )
-            status_result = self.cursor.fetchone()
-            if status_result:
-                self._account_status = status_result[0]
-            else:
-                self._account_status = 'undefined account status'  
-        except mysql.connector.Error as e:
-            print(f"An error occurred while fetching account status: {e}")    
-        return self._account_status
+
 
