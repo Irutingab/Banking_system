@@ -55,13 +55,13 @@ def generate_accounts(cursor, conn, num_records=1000000):
     if not customer_ids:
         raise ValueError("No customers found in the database")
 
-    #Fetch valid ENUM values for account_status
+    
     cursor.execute("SHOW COLUMNS FROM Accounts LIKE 'account_status'")
     account_status_enum_result = cursor.fetchone()
     if not account_status_enum_result:
         raise ValueError("The 'account_status' column does not exist in the Accounts table. Please check the database schema.")
 
-    account_status_enum = account_status_enum_result[1]  # Extract ENUM definition
+    account_status_enum = account_status_enum_result[1]  
     valid_account_statuses = account_status_enum.replace("enum(", "").replace(")", "").replace("'", "").split(",")
     
     #Ensure account_status has valid values
