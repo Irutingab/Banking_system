@@ -18,7 +18,7 @@ def generate_rwandan_phone_number():
 
 def insert_batch(cursor, conn, queue, query):
     while queue:
-        batch = [queue.popleft() for _ in range(min(len(queue), 1000))]#processes the data and ensures it is added to he DB in order
+        batch = [queue.popleft() for _ in range(min(len(queue), 1000))]#processes the data and ensures it is added to the DB in order
         cursor.executemany(query, batch)
         conn.commit()
 
@@ -98,10 +98,9 @@ def generate_transactions(cursor, conn, num_records=1000000):
     """
     account_numbers = get_all_account_numbers(cursor)  
     if not account_numbers:
-        raise ValueError("No accounts found in the database. Please generate accounts first.")
+        raise ValueError("No accounts found in the database")
 
     for account_number in account_numbers:
-        # Randomly decide how many transactions this account will have (0 to 30)
         num_transactions = random.randint(0, 30)
         for _ in range(num_transactions):
             transaction_type = random.choice(['Deposit', 'Withdrawal', 'Interest'])
@@ -112,7 +111,7 @@ def generate_transactions(cursor, conn, num_records=1000000):
             if len(queue) >= 1000: 
                 insert_batch(cursor, conn, queue, query)
     insert_batch(cursor, conn, queue, query) 
-    print("Transactions generated for accounts. Some accounts may have no transactions.")
+    print("Transactions generated for accounts successfully.")
 
 def main():
     db_connection = DataBaseConnection()
@@ -120,8 +119,8 @@ def main():
     conn = db_connection.get_connection()
 
     try:
-        #generate_customers(cursor, conn)
-        #generate_accounts(cursor, conn)
+        generate_customers(cursor, conn)
+        generate_accounts(cursor, conn)
         generate_transactions(cursor, conn)
     except Exception as e:
         print(f"An error occurred while generating data: {e}")
