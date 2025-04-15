@@ -18,7 +18,7 @@ def generate_rwandan_phone_number():
 
 def insert_batch(cursor, conn, queue, query):
     while queue:
-        batch = [queue.popleft() for _ in range(min(len(queue), 1000))]#processes the data and ensures it is added to he DB in order
+        batch = [queue.popleft() for _ in range(min(len(queue), 1000))]#processes the data and ensures it is added to the DB in order
         cursor.executemany(query, batch)
         conn.commit()
 
@@ -55,13 +55,13 @@ def generate_accounts(cursor, conn, num_records=1000000):
     if not customer_ids:
         raise ValueError("No customers found in the database")
 
-    #Fetch valid ENUM values for account_status
+    
     cursor.execute("SHOW COLUMNS FROM Accounts LIKE 'account_status'")
     account_status_enum_result = cursor.fetchone()
     if not account_status_enum_result:
         raise ValueError("The 'account_status' column does not exist in the Accounts table. Please check the database schema.")
 
-    account_status_enum = account_status_enum_result[1]  # Extract ENUM definition
+    account_status_enum = account_status_enum_result[1]  
     valid_account_statuses = account_status_enum.replace("enum(", "").replace(")", "").replace("'", "").split(",")
     
     #Ensure account_status has valid values
@@ -98,10 +98,9 @@ def generate_transactions(cursor, conn, num_records=1000000):
     """
     account_numbers = get_all_account_numbers(cursor)  
     if not account_numbers:
-        raise ValueError("No accounts found in the database. Please generate accounts first.")
+        raise ValueError("No accounts found in the database")
 
     for account_number in account_numbers:
-        # Randomly decide how many transactions this account will have (0 to 30)
         num_transactions = random.randint(0, 30)
         for _ in range(num_transactions):
             transaction_type = random.choice(['Deposit', 'Withdrawal', 'Interest'])
@@ -112,7 +111,7 @@ def generate_transactions(cursor, conn, num_records=1000000):
             if len(queue) >= 1000: 
                 insert_batch(cursor, conn, queue, query)
     insert_batch(cursor, conn, queue, query) 
-    print("Transactions generated for accounts. Some accounts may have no transactions.")
+    print("Transactions generated for accounts successfully.")
 
 def main():
     db_connection = DataBaseConnection()
