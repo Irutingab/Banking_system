@@ -302,17 +302,45 @@ def create_account(cursor, connection):
     except mysql.connector.Error as e:
         print(f"Database related error: {e}")
 
-def check_account_status(cursor):
+def determine_account_status(account):
+    
+    today = datetime.now().date()
+    reference_date = account.get('transaction_date') or account['created_at'].date()
+    months_count = (today.year - reference_date.year) * 12 + today.month - reference_date.month
+    years_count = today.year - reference_date.year
+
+    if years_count >= 2:
+        return "deleted"
+    elif months_count >= 5:
+        return "inactive"
+    else:
+        return "active"
+
+def check_account_status(cursor, conn):
+    
     account_number = input("Enter the account number to verify its status: ")
     try:
         cursor.execute(
-            "SELECT account_status FROM Accounts WHERE account_number = %s",
+            "SELECT a.account_number, a.created_at, MAX(t.transaction_date) AS transaction_date, a.account_status "
+            "FROM Accounts a LEFT JOIN Transactions t ON a.account_number = t.account_number "
+            "WHERE a.account_number = %s GROUP BY a.account_number",
             (account_number,)
         )
         result = cursor.fetchone()
         if result:
-            account_status = result[0]
-            print(f"Account {account_number} is currently {account_status}.")
+            columns = [desc[0] for desc in cursor.description]
+            account = dict(zip(columns, result))
+            calculated_status = determine_account_status(account)
+
+            if account['account_status'] != calculated_status:
+                cursor.execute(
+                    "UPDATE Accounts SET account_status = %s WHERE account_number = %s",
+                    (calculated_status, account_number)
+                )
+                conn.commit()  
+                print(f"Account {account_number} status updated to {calculated_status}.")
+            else:
+                print(f"Account {account_number} is currently {account['account_status']}.")
         else:
             print(f"Account {account_number} does not exist.")
     except mysql.connector.Error as e:
@@ -340,11 +368,10 @@ def account_choice():
         elif choice == '3':
             operate_existing_account(cursor)
         elif choice == '4': 
-            check_account_status(cursor)
+            check_account_status(cursor, conn) 
         elif choice == '5':
             print("___ Exiting ___")
             break
         else:
             print("Invalid choice")
-
 
