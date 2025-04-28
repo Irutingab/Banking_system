@@ -15,6 +15,9 @@ class CurrentAccount(Account):
         self._overdraft_limit = int(overdraft_limit)
         self._fetch_account_status()
 
+    # The `except mysql.connector.Error as e:` block in the code snippet is a try-except block in
+    # Python. It is used to catch any exceptions that may occur during the execution of the code
+    # within the try block.
     def _fetch_account_status(self):
         try:
             self.cursor.execute(
@@ -163,8 +166,6 @@ def update_account(cursor, conn, account_number):
             else:
                 print("Interest rate unchanged.")
 
-        else:
-            print(" Unknown account error.")
 
     except mysql.connector.Error as e:
         print(f" DB Error: {e}")
@@ -186,6 +187,9 @@ def account_menu(account):
             account.deposit(amount)
         elif choice == '2':
             amount = input("Enter withdrawal amount: ")
+            if amount.strip() == "":
+                print("Withdrawal amount cannot be empty.")
+                continue
             account.withdraw(amount)
         elif choice == '3':
             account.display_balance()
